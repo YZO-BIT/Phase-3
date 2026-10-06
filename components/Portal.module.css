@@ -31,7 +31,7 @@
 .container { width: 100%; max-width: 1400px; margin-inline: auto; }
 .section { padding: 64px 80px; border-top: 1px solid var(--border); }
 .alternateSection { background: var(--surface-lowest); }
-.main { padding-top: 80px; }
+.main { padding-top: 92px; }
 .eyebrow { font-size: 11px; line-height: 14px; font-weight: 600; letter-spacing: 0.1em; color: var(--accent-muted); text-transform: uppercase; }
 .largeHeading { font-size: 64px; line-height: 68px; font-weight: 600; letter-spacing: -0.03em; text-transform: uppercase; }
 .square { display: inline-block; flex-shrink: 0; width: 8px; height: 8px; background: var(--primary); }
@@ -43,25 +43,28 @@
 .outlineButton:hover { border-color: var(--primary); color: var(--primary); }
 
 /* Fixed navigation */
-.header { position: fixed; inset: 0 0 auto; z-index: 50; background: rgb(17 19 23 / 80%); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
-.headerInner { height: 80px; padding-inline: 80px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.brand { display: inline-flex; align-items: center; gap: 8px; }
-.institutionLogos { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
-.institutionLogos img { display: block; object-fit: contain; height: auto; border-radius: 2px; }
-.ieeeLogo { width: 88px; }
-.gehuLogo { width: 140px; }
-.header:has(.institutionLogos) .headerInner { gap: 12px; }
-.header:has(.institutionLogos) .desktopNav { gap: 16px; }
-.header:has(.institutionLogos) .activeBadge { display: none; }
-.header:has(.institutionLogos) .brand .logo { display: none; }
+.header { position: fixed; inset: 0 0 auto; z-index: 50; background: rgb(17 19 23 / 88%); backdrop-filter: blur(14px); border-bottom: 1px solid var(--border); }
+.headerInner { height: 92px; padding-inline: 80px; display: flex; align-items: center; gap: 28px; }
+.headerIdentity { display: flex; align-items: center; min-width: 0; flex-shrink: 0; gap: 22px; }
+.universityLogo { display: block; width: 214px; flex-shrink: 0; }
+.universityLogo img, .ieeeLockup img { display: block; width: 100%; height: auto; object-fit: contain; }
+.headerDivider { width: 1px; height: 44px; flex-shrink: 0; background: rgb(226 226 230 / 24%); }
+.brand { display: inline-flex; align-items: center; gap: 12px; min-width: 0; flex-shrink: 0; }
 .wordmark { font-size: 24px; line-height: 30px; font-weight: 500; letter-spacing: -0.025em; text-transform: uppercase; }
+.header .wordmark { font-size: 30px; line-height: 36px; font-weight: 700; letter-spacing: -0.04em; white-space: nowrap; }
 .phaseBadge { display: inline-block; padding: 2px 4px; border: 1px solid var(--border); font-size: 11px; line-height: 14px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
-.desktopNav { display: flex; align-items: center; gap: 32px; }
-.desktopNav a { font-size: 11px; line-height: 14px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.header .phaseBadge { display: inline-flex; align-items: center; min-height: 28px; padding: 4px 10px; border-color: rgb(0 242 254 / 50%); border-radius: 5px; background: rgb(0 242 254 / 8%); color: var(--accent-muted); font-size: 10px; font-weight: 700; }
+.desktopNav { display: flex; align-self: stretch; align-items: center; gap: 32px; margin-left: auto; }
+.desktopNav a { position: relative; display: inline-flex; align-items: center; height: 100%; font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.desktopNav a::after { content: ""; position: absolute; right: 0; bottom: 21px; left: 0; height: 2px; background: transparent; transition: background 150ms, box-shadow 150ms; }
 .desktopNav a:hover { color: var(--text); }
-.headerActions { display: flex; align-items: center; gap: 16px; }
-.headerRegister { padding: 8px 16px; font-size: 11px; line-height: 14px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--background); background: var(--text); }
-.headerRegister:hover { background: var(--primary); }
+.desktopNav a:hover::after, .desktopNav .activeNavLink::after { background: var(--primary); box-shadow: 0 0 10px rgb(0 242 254 / 55%); }
+.desktopNav .activeNavLink { color: var(--text); }
+.headerActions { display: flex; align-items: center; gap: 18px; margin-left: auto; flex-shrink: 0; }
+.ieeeLockup { width: 150px; flex-shrink: 0; }
+.headerRegister { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-width: 148px; min-height: 50px; padding: 12px 22px; color: #00373a; background: var(--primary); clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 50%, calc(100% - 13px) 100%, 0 100%, 13px 50%); font-size: 13px; line-height: 18px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; box-shadow: 0 0 20px rgb(0 242 254 / 24%); transition: background 150ms, box-shadow 150ms, transform 150ms; }
+.headerRegister:hover { background: var(--primary-pale); box-shadow: 0 0 26px rgb(0 242 254 / 42%); transform: translateY(-1px); }
+.headerRegister > span:last-child { font-size: 17px; line-height: 18px; }
 .mobileNav { display: none; }
 .menuButton { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; background: transparent; }
 .mobileMenu { position: absolute; right: 20px; top: 72px; width: min(280px, calc(100vw - 40px)); display: flex; flex-direction: column; padding: 12px; background: var(--surface-lowest); border: 1px solid var(--outline); box-shadow: 0 12px 32px rgb(0 0 0 / 30%); }
@@ -167,23 +170,17 @@
 .footerStatus p { text-align: right; }
 .footerStatus p > span { display: inline-block; margin-top: 4px; }
 
-/* Cyber theme: exact dimensions and cold-spectrum palette from screen 2 */
+/* Cyber theme: cold-spectrum palette and reference-aligned header proportions */
 .cyber .container { max-width: 1440px; padding-inline: 48px; }
-.cyber .header { background: rgb(16 19 26 / 85%); border-bottom: 0; backdrop-filter: blur(24px); box-shadow: 0 1px 16px rgb(0 242 254 / 6%); }
+.cyber .header { background: rgb(16 19 26 / 92%); border-bottom: 1px solid rgb(0 242 254 / 18%); backdrop-filter: blur(24px); box-shadow: 0 1px 16px rgb(0 242 254 / 6%); }
 .cyber .headerInner { max-width: 1440px; margin-inline: auto; padding-inline: 48px; }
-.cyber .brand { gap: 4px; flex-shrink: 0; font-family: var(--font-space), sans-serif; }
-.cyber .logo { width: auto; height: 32px; margin-right: 12px; object-fit: contain; }
-.cyber .wordmark { font-size: 20px; line-height: 28px; font-weight: 600; color: var(--primary-pale); }
-.cyber .phaseBadge { border: 0; border-radius: 2px; background: rgb(0 242 254 / 15%); color: var(--accent-muted); font-size: 10px; line-height: 14px; font-weight: 700; letter-spacing: 0.1em; }
-.cyber .desktopNav { gap: 24px; }
-.cyber .desktopNav a { font-family: var(--font-space), sans-serif; font-size: 14px; line-height: 20px; letter-spacing: 0.05em; font-weight: 600; }
-.cyber .headerRegister { background: var(--primary); color: #00373a; padding-block: 10px; border-radius: 2px; font-family: var(--font-space), sans-serif; font-size: 14px; line-height: 20px; font-weight: 700; letter-spacing: 0.025em; box-shadow: 0 0 20px rgb(0 242 254 / 35%); }
-.cyber .headerRegister:hover { box-shadow: 0 0 28px rgb(0 242 254 / 55%); }
+.cyber .headerIdentity, .cyber .brand, .cyber .desktopNav, .cyber .headerActions, .cyber .headerRegister { font-family: var(--font-space), sans-serif; }
+.cyber .header .wordmark { color: var(--primary-pale); }
+.cyber .header .phaseBadge { color: var(--accent-muted); }
+.cyber .desktopNav { gap: 32px; }
+.cyber .desktopNav a { font-size: 13px; line-height: 18px; letter-spacing: 0.06em; }
+.cyber .headerRegister { font-size: 13px; line-height: 18px; font-weight: 700; }
 .statusDot { width: 8px; height: 8px; flex-shrink: 0; display: inline-block; border-radius: 50%; background: var(--primary); }
-.activeBadge { display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 12px; background: rgb(39 42 49 / 80%); color: #00e0b3; font-family: var(--font-space), sans-serif; font-size: 10px; line-height: 14px; letter-spacing: 0.05em; text-transform: uppercase; font-weight: 700; }
-.activeBadge .statusDot { background: #00e0b3; }
-.profileButton { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; flex-shrink: 0; border-radius: 12px; background: var(--primary-pale); color: #00373a; }
-.profileButton :global(.material-icon) { font-size: 18px; }
 .cyber .eyebrow { font-family: var(--font-space), sans-serif; font-size: 10px; line-height: 14px; letter-spacing: 0.1em; font-weight: 700; }
 .cyberHeading { font-family: var(--font-space), sans-serif; font-size: 40px; line-height: 48px; font-weight: 700; letter-spacing: -0.02em; text-transform: uppercase; margin-top: 4px; }
 .cyberSection { padding-block: 40px; }
@@ -329,19 +326,27 @@
 .footerBottom > p:last-child { display: flex; align-items: center; gap: 16px; font-family: var(--font-space), sans-serif; font-size: 10px; line-height: 14px; letter-spacing: 0.05em; text-transform: uppercase; }
 
 /* Laptop and tablet reflow */
-@media (max-width: 1279px) {
-  .header:has(.institutionLogos) .desktopNav { display: none; }
-  .header:has(.institutionLogos) .mobileNav { display: block; }
-  .cyber .logo { height: 23px; }
-  .cyber .brand .wordmark { font-size: 18px; }
+@media (max-width: 1350px) {
+  .headerInner { gap: 18px; }
+  .universityLogo { width: 180px; }
+  .header .wordmark { font-size: 25px; line-height: 32px; }
+  .headerIdentity { gap: 16px; }
+  .desktopNav { gap: 20px; }
   .cyber .headerActions { gap: 10px; }
-  .cyber .desktopNav { gap: 16px; }
-  .cyber .desktopNav a { font-size: 12px; }
+  .cyber .desktopNav { gap: 20px; }
+}
+
+@media (max-width: 1279px) {
+  .desktopNav { display: none; }
+  .mobileNav { display: block; }
 }
 
 @media (max-width: 1023px) {
   .section { padding: 64px 24px; }
   .headerInner { padding-inline: 24px; }
+  .ieeeLockup, .headerActions > .headerDivider { display: none; }
+  .headerRegister { min-width: 126px; min-height: 44px; padding-inline: 16px; }
+  .main { padding-top: 84px; }
   .editorialHero { padding-block: 64px; }
   .editorialHeroTitle { font-size: 72px; line-height: 78px; letter-spacing: -0.04em; }
   .phaseLine { margin-top: -8px; }
@@ -358,8 +363,6 @@
   .footerGrid { gap: 24px; }
   .cyber .container { padding-inline: 20px; }
   .cyber .headerInner { padding-inline: 20px; }
-  .cyber .desktopNav { display: none; }
-  .cyber .mobileNav { display: block; }
   .cyberHeroTitle { font-size: 40px; line-height: 48px; }
   .cyberTagline { font-size: 20px; line-height: 28px; }
   .heroDescription { font-size: 15px; line-height: 24px; }
@@ -373,19 +376,18 @@
 }
 
 @media (max-width: 767px) {
-  .header:has(.institutionLogos) .headerInner { height: 106px; flex-wrap: wrap; gap: 6px 12px; padding-block: 8px; }
-  .institutionLogos { flex-basis: 100%; justify-content: space-between; gap: 12px; }
-  .ieeeLogo { width: 63px; }
-  .gehuLogo { width: 108px; }
-  .portal:has(.institutionLogos) .main { padding-top: 106px; }
-  .header:has(.institutionLogos) .mobileMenu { top: 102px; }
-  .desktopNav { display: none; }
-  .mobileNav { display: block; }
-  .wordmark { font-size: 18px; line-height: 26px; }
-  .brand { gap: 6px; }
-  .phaseBadge { font-size: 9px; letter-spacing: 0.1em; }
+  .headerInner { height: 106px; flex-wrap: wrap; gap: 6px 12px; padding-block: 8px; }
+  .headerIdentity { flex-basis: 100%; justify-content: flex-start; gap: 12px; }
+  .universityLogo { width: 96px; }
+  .headerIdentity .headerDivider { height: 36px; }
+  .brand { gap: 8px; }
+  .header .wordmark { font-size: 18px; line-height: 26px; }
+  .header .phaseBadge { min-height: 24px; padding-inline: 7px; font-size: 9px; letter-spacing: 0.08em; }
+  .ieeeLockup { display: block; width: 100px; }
+  .main { padding-top: 106px; }
+  .mobileMenu { top: 102px; }
   .headerActions { gap: 6px; }
-  .headerRegister { padding-inline: 10px; font-size: 10px; letter-spacing: 0.08em; }
+  .headerRegister { min-width: 112px; min-height: 36px; padding: 8px 12px; font-size: 10px; letter-spacing: 0.08em; }
   .section { padding-block: 48px; }
   .editorialHero { padding-block: 64px; }
   .institutionTag { font-size: 10px; letter-spacing: 0.12em; align-items: flex-start; }
@@ -436,11 +438,8 @@
   .footerBrand { grid-column: 1 / -1; }
   .footerContact a { overflow-wrap: anywhere; }
   .footerStatus { grid-column: 1 / -1; flex-direction: row; align-items: flex-start; }
-  .cyber .logo { display: none; }
-  .cyber .activeBadge { display: none; }
-  .cyber .profileButton { display: none; }
-  .cyber .brand .wordmark { font-size: 16px; line-height: 24px; }
-  .cyber .headerRegister { padding: 8px 10px; font-size: 10px; line-height: 14px; }
+  .cyber .header .wordmark { font-size: 18px; line-height: 26px; }
+  .cyber .headerRegister { padding: 8px 12px; font-size: 10px; line-height: 14px; }
   .cyber .headerActions { gap: 6px; }
   .heroBadge { max-width: 100%; font-size: 8px; letter-spacing: 0.07em; padding-inline: 10px; }
   .cyberHeroTitle { font-size: clamp(28px, 8.3vw, 40px); line-height: 1.15; }
@@ -480,9 +479,16 @@
 }
 
 @media (max-width: 374px) {
-  .headerInner { padding-inline: 16px; }
-  .wordmark { font-size: 16px; }
-  .brand .phaseBadge { display: none; }
+  .headerInner { height: 148px; align-content: center; padding-inline: 16px; }
+  .headerIdentity { height: 88px; flex-wrap: wrap; align-content: center; gap: 4px 10px; }
+  .universityLogo { flex-basis: 100%; width: 112px; }
+  .headerIdentity .headerDivider { display: none; }
+  .brand { flex-basis: 100%; gap: 8px; }
+  .header .wordmark { font-size: 16px; line-height: 24px; }
+  .header .phaseBadge { display: inline-flex; min-height: 22px; padding-inline: 6px; font-size: 8px; }
+  .headerActions { flex-basis: 100%; justify-content: flex-end; }
+  .main { padding-top: 148px; }
+  .mobileMenu { top: 144px; }
   .cyber .headerInner { padding-inline: 16px; }
   .cyber .container { padding-inline: 16px; }
   .section, .footer { padding-inline: 20px; }

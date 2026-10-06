@@ -22,6 +22,7 @@ export function Footer({ variant }: { variant: PortalVariant }) {
           <div className={styles.footerContact}>
             <h2>{cyber ? "Organizer & Desk Contact" : "Desk Contact"}</h2>
             <div>{cyber && <Icon name="badge" />}<div>{cyber && <p className={styles.contactLabel}>Official Support</p>}<a href="mailto:prinskanyal@gmail.com">prinskanyal@gmail.com</a></div></div>
+            <div>{cyber && <Icon name="mail" />}<div>{cyber && <p className={styles.contactLabel}>Operations Email</p>}<a href="mailto:work.yashgudiyal@gmail.com">work.yashgudiyal@gmail.com</a></div></div>
             <div>{cyber && <Icon name="pin_drop" />}<div>{cyber && <p className={styles.contactLabel}>Venue</p>}<p>GEHU Campus, Clement Town{cyber ? ", " : <br />}Dehradun, Uttarakhand, India</p></div></div>
           </div>
           {!cyber && <div className={styles.footerStatus}><span>Phase 03 Active</span><p>© 2026 IEEE SB GEHU.<br /><span>All Rights Reserved.</span></p></div>}
