@@ -29,7 +29,7 @@ export function AdminLogin() {
     finally { inFlight.current = false; setBusy(false); }
   }
 
-  return <form className={`${formStyles.registryPanel} ${styles.login}`} onSubmit={(event) => { event.preventDefault(); void login(); }} aria-busy={busy}>
+  return <form method="post" action="" className={`${formStyles.registryPanel} ${styles.login}`} onSubmit={(event) => { event.preventDefault(); void login(); }} aria-busy={busy}>
     <p className={formStyles.stepLabel}>IEEE SB GEHU • Authorized Organizers</p>
     <h1>Administrator Sign In</h1>
     <p>Review submitted payment screenshots and verify registrations.</p>

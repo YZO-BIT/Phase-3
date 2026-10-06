@@ -8,7 +8,6 @@ import type { Participant } from "./ParticipantFields";
 import styles from "./Registration.module.css";
 
 export type TeamMember = { name: string; enrollment: string; email: string; phone: string };
-export const sampleMembers: TeamMember[] = [];
 
 export function TeamFields({ participant, selectedEvents, teamName, setTeamName, members, setMembers }: {
   participant: Participant; selectedEvents: FestivalEvent[]; teamName: string; setTeamName: (name: string) => void;
