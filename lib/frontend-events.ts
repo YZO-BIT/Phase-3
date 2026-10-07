@@ -95,7 +95,7 @@ const officialDetails: Record<string, Omit<FrontendEvent, keyof FestivalEvent>> 
   karts: {
     officialDate: "16 October 2026",
     officialDay: 1,
-    officialTime: "9:00 AM · Qualifying Rounds 1 & 2",
+    officialTime: "9:00 AM · Qualifying Round 1",
     officialStage: "Esports Qualifying",
     officialFee: 50,
     officialVenue: "CR 117",
@@ -106,7 +106,7 @@ const officialDetails: Record<string, Omit<FrontendEvent, keyof FestivalEvent>> 
   royale: {
     officialDate: "16 October 2026",
     officialDay: 1,
-    officialTime: "9:00 AM · Qualifying Rounds 1 & 2",
+    officialTime: "9:00 AM · Qualifying Round 1",
     officialStage: "Esports Qualifying",
     officialFee: 50,
     officialVenue: "CR 116",
@@ -134,9 +134,21 @@ export const frontendEvents: FrontendEvent[] = events.map((event) => ({
 
 export const frontendEventById = new Map(frontendEvents.map((event) => [event.id, event]));
 
-export const preEventReporting = "KP Nautiyal Auditorium, 5th Floor";
+export const openingCeremony = {
+  date: "16 October 2026",
+  time: "8:00 AM",
+  label: "Opening Ceremony",
+} as const;
 
-export const officialFinalists = frontendEvents.filter((event) => event.isEsports);
+export const preEventReporting = "K.P. Nautiyal Auditorium, 5th Floor";
+
+export const officialFinalists = frontendEvents.filter((event) => ["bgmi", "ff", "val"].includes(event.id));
+
+export const prizeDistribution = {
+  date: "19 October 2026",
+  time: "1:00 PM",
+  label: "Prize Distribution / Award Distribution",
+} as const;
 
 export function frontendCurrency(amount: number) {
   return `₹${amount.toLocaleString("en-IN")}`;

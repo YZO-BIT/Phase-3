@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { frontendCurrency, frontendEvents, type FrontendEvent } from "@/lib/frontend-events";
+import { frontendCurrency, frontendEvents, preEventReporting, type FrontendEvent } from "@/lib/frontend-events";
 import { Icon } from "./Icon";
 import { SelectEventButton } from "./SelectEventButton";
 import styles from "./Portal.module.css";
@@ -70,7 +70,7 @@ export function EventsCatalog() {
          <h2 className={styles.cyberHeading} id="event-dialog-title">{detail.title}</h2><p>{detail.description}</p>
          <dl className={styles.eventDetails}><div><dt>Starting time</dt><dd>{detail.officialTime}</dd></div><div><dt>Format</dt><dd>{detail.officialMode}</dd></div><div><dt>Venue</dt><dd>{detail.officialVenue}</dd></div><div><dt>Registration fee</dt><dd>{frontendCurrency(detail.officialFee)}</dd></div></dl>
          <div className={styles.modalHosts}><span>Hosts</span><p>{detail.hosts.join(" · ")}</p></div>
-         <div className={styles.reportingNotice}><Icon name="location_on" /><p><strong>Pre-event reporting:</strong> All participants and teams must report to KP Nautiyal Auditorium, 5th Floor before their respective event.</p></div>
+          {detail.officialDay === 1 && <div className={styles.reportingNotice}><Icon name="location_on" /><p><strong>Pre-event reporting:</strong> All participants and teams must report to {preEventReporting} before their respective event.</p></div>}
         <p className={styles.modalNote}>Check the master schedule before choosing your events. Overlapping time slots cannot be registered together.</p>
         <div onClick={() => dialog.current?.close()}><SelectEventButton className={`${styles.button} ${styles.primaryButton}`} id={detail.id}>Select for Registration <Icon name="arrow_forward" /></SelectEventButton></div>
       </dialog>

@@ -11,9 +11,7 @@ export function ConflictNotice({ message, onDismiss }: { message: string; onDism
 export function EventSelection({ variant, selectedIds, onSelect }: { variant: PortalVariant; selectedIds: string[]; onSelect: (id: string) => void }) {
   const cyber = variant === "cyber";
   const items = cyber ? frontendEvents : editorialEvents;
-  return <>
-    {cyber && <div className={styles.registrationReporting}><Icon name="location_on" /><p><strong>Pre-event reporting:</strong> All participants and teams must report to {preEventReporting} before their respective event.</p></div>}
-    <fieldset className={cyber ? styles.selectionGrid : styles.eventChecklist}>
+  return <fieldset className={cyber ? styles.selectionGrid : styles.eventChecklist}>
     <legend className="sr-only">Choose events for registration</legend>
     {items.map((event, index) => {
       const selected = selectedIds.includes(event.id);
@@ -28,10 +26,9 @@ export function EventSelection({ variant, selectedIds, onSelect }: { variant: Po
       return <label className={`${cyber ? styles.selectionCard : styles.checklistItem} ${selected ? styles.selectedCard : ""} ${blocked ? styles.blockedCard : ""}`} key={event.id}>
         {cyber ? <>
         <div className={styles.selectionCardMeta}><span>{eventDate} • {eventTime}</span><input type="checkbox" checked={selected} disabled={blocked} aria-describedby={blocked ? `blocked-${event.id}` : undefined} onChange={() => onSelect(event.id)} /></div>
-        <h3>{event.title}</h3><p>{eventMode} • {eventVenue}</p><div className={styles.selectionCardFooter}><strong>{official ? frontendCurrency(eventFee) : currency(eventFee)}{!official && event.feeUnit && <span>/{event.feeUnit}</span>}</strong>{overlap && !selected && <span id={`blocked-${event.id}`}><Icon name="lock_clock" />Disabled · Clashes with {overlap.title}</span>}</div>
+        <h3>{event.title}</h3><p>{eventMode} • {eventVenue}</p>{official?.officialDay === 1 && <p className={styles.selectionReporting}>Pre-event reporting: All participants and teams must report to {preEventReporting} before their respective event.</p>}<div className={styles.selectionCardFooter}><strong>{official ? frontendCurrency(eventFee) : currency(eventFee)}{!official && event.feeUnit && <span>/{event.feeUnit}</span>}</strong>{overlap && !selected && <span id={`blocked-${event.id}`}><Icon name="lock_clock" />Disabled · Clashes with {overlap.title}</span>}</div>
       </> : <><div><input type="checkbox" checked={selected} disabled={blocked} aria-describedby={blocked ? `blocked-${event.id}` : undefined} onChange={() => onSelect(event.id)} /><span>{String(index + 1).padStart(2, "0")}. {event.title}</span></div><span>{currency(event.fee)}</span></>}
       </label>;
     })}
-    </fieldset>
-  </>;
+  </fieldset>;
 }
