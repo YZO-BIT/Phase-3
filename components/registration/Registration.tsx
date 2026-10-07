@@ -38,7 +38,7 @@ function useRegistrationSubmit({ participant, eventIds, teamName, members, utr, 
   const [registration, setRegistration] = useState<RegistrationView | null>(null);
   const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [idempotencyKey] = useState(newIdempotencyKey);
+  const idempotencyKey = useRef<string | null>(null);
 
   const submit = useCallback(async () => {
     if (!screenshot) { setSubmitError("Payment screenshot required before registration can be submitted."); return false; }
@@ -46,7 +46,8 @@ function useRegistrationSubmit({ participant, eventIds, teamName, members, utr, 
     setSubmitError("");
     const form = new FormData();
     const completeMembers = members.filter((member) => Object.values(member).some((value) => value.trim()));
-    form.set("data", JSON.stringify({ participant, eventIds, teamName: teamName.trim(), members: completeMembers, utr: utr.trim(), amount, agreements, idempotencyKey }));
+    const requestIdempotencyKey = idempotencyKey.current ?? (idempotencyKey.current = newIdempotencyKey());
+    form.set("data", JSON.stringify({ participant, eventIds, teamName: teamName.trim(), members: completeMembers, utr: utr.trim(), amount, agreements, idempotencyKey: requestIdempotencyKey }));
     form.set("screenshot", screenshot, screenshot.name);
     try {
       const response = await fetch("/api/registrations", { method: "POST", body: form, credentials: "same-origin" });

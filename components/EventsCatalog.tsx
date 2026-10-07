@@ -6,18 +6,18 @@ import { Icon } from "./Icon";
 import { SelectEventButton } from "./SelectEventButton";
 import styles from "./Portal.module.css";
 
+const esportsEvents = new Set(["bgmi", "ff", "val", "karts", "royale"]);
+const technicalEvents = new Set(["cp", "ctf"]);
+
 const filters = [
-  { id: "all", label: "All Events (10)" },
-  { id: "day1", label: "Day 1 (5)" },
-  { id: "day2", label: "Day 2 (5)" },
+  { id: "all", label: "All Events", count: events.length },
+  { id: "day1", label: "Day 1", count: events.filter((event) => event.day === 1).length },
+  { id: "day2", label: "Day 2", count: events.filter((event) => event.day === 2).length },
   { id: "solo", label: "Solo" },
   { id: "team", label: "Team" },
   { id: "esports", label: "Esports" },
   { id: "technical", label: "Technical" },
-];
-
-const esportsEvents = new Set(["bgmi", "ff", "val", "karts", "royale"]);
-const technicalEvents = new Set(["cp", "ctf"]);
+] as const;
 
 function EventCard({ event, onDetails }: { event: FestivalEvent; onDetails: () => void }) {
   return (
@@ -59,7 +59,7 @@ export function EventsCatalog() {
     <section id="events" className={`${styles.container} ${styles.cyberSection}`} aria-labelledby="events-title">
       <div className={styles.catalogHeading}>
         <div><span className={styles.eyebrow}>Battle Matrix &amp; Tracks</span><h2 className={styles.cyberHeading} id="events-title">10 Competition Signals</h2><p className={styles.catalogDescription}>Review each sanctioned track, timing, venue, and participation mode before selecting a registration slot.</p></div>
-        <div className={styles.tabs} role="group" aria-label="Filter competitions">{filters.map((item) => <button className={filter === item.id ? styles.activeTab : ""} key={item.id} aria-pressed={filter === item.id} onClick={() => setFilter(item.id)} type="button">{item.label}</button>)}</div>
+        <div className={styles.tabs} role="group" aria-label="Filter competitions">{filters.map((item) => <button className={filter === item.id ? styles.activeTab : ""} key={item.id} aria-pressed={filter === item.id} onClick={() => setFilter(item.id)} type="button">{item.label}{"count" in item ? ` (${item.count})` : ""}</button>)}</div>
       </div>
       <div className={styles.eventsGrid}>{displayedEvents.map((event) => <EventCard key={event.id} event={event} onDetails={() => openDetails(event)} />)}</div>
       <dialog ref={dialog} className={styles.eventModal} aria-labelledby="event-dialog-title" onClick={(e) => { if (e.target === e.currentTarget) dialog.current?.close(); }}>
