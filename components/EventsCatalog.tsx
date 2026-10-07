@@ -1,56 +1,57 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { currency, events, type FestivalEvent } from "@/lib/events";
+import { frontendCurrency, frontendEvents, type FrontendEvent } from "@/lib/frontend-events";
 import { Icon } from "./Icon";
 import { SelectEventButton } from "./SelectEventButton";
 import styles from "./Portal.module.css";
 
-const esportsEvents = new Set(["bgmi", "ff", "val", "karts", "royale"]);
+const esportsEvents = new Set(frontendEvents.filter((event) => event.isEsports).map((event) => event.id));
 const technicalEvents = new Set(["cp", "ctf"]);
 
 const filters = [
-  { id: "all", label: "All Events", count: events.length },
-  { id: "day1", label: "Day 1", count: events.filter((event) => event.day === 1).length },
-  { id: "day2", label: "Day 2", count: events.filter((event) => event.day === 2).length },
+  { id: "all", label: "All Events", count: frontendEvents.length },
+  { id: "day1", label: "Day 1", count: frontendEvents.filter((event) => event.officialDay === 1).length },
+  { id: "day2", label: "Day 2", count: frontendEvents.filter((event) => event.officialDay === 2).length },
   { id: "solo", label: "Solo" },
   { id: "team", label: "Team" },
   { id: "esports", label: "Esports" },
   { id: "technical", label: "Technical" },
 ] as const;
 
-function EventCard({ event, onDetails }: { event: FestivalEvent; onDetails: () => void }) {
+function EventCard({ event, onDetails }: { event: FrontendEvent; onDetails: () => void }) {
   return (
     <article className={styles.eventCard}>
       <div>
-        <div className={styles.eventCardTop}><div className={styles.eventIcon}><Icon name={event.icon} /></div><span className={`${styles.eventDate} ${event.overlap ? styles.overlapDate : ""}`}>Day {event.day} • {event.overlap ? `Overlap Slot ${event.overlap}` : `Oct ${event.date}`}</span></div>
+        <div className={styles.eventCardTop}><div className={styles.eventIcon}><Icon name={event.icon} /></div><span className={styles.eventDate}>{event.officialDate} • {event.officialStage}</span></div>
         <h3>{event.title}</h3><p className={styles.eventDescription}>{event.description}</p>
         <dl className={styles.eventDetails}>
-          <div><dt>Slot:</dt><dd className={styles.eventTime}>{event.slot}</dd></div>
-          <div><dt>Structure:</dt><dd className={event.members > 1 ? styles.teamMode : styles.individualMode}>{event.mode}</dd></div>
-          <div><dt>Venue:</dt><dd>{event.venue}</dd></div>
+          <div><dt>Start:</dt><dd className={styles.eventTime}>{event.officialTime}</dd></div>
+          <div><dt>Format:</dt><dd className={event.officialMode.startsWith("Individual") ? styles.individualMode : styles.teamMode}>{event.officialMode}</dd></div>
+          <div><dt>Venue:</dt><dd>{event.officialVenue}</dd></div>
         </dl>
+        <div className={styles.eventHosts}><span>Hosts</span><p>{event.hosts.join(" · ")}</p></div>
       </div>
-      <div className={styles.eventCardBottom}><p className={styles.eventCardFee}>{currency(event.fee)}{event.feeUnit && <span>/{event.feeUnit}</span>}</p><div><button className={styles.detailsButton} type="button" onClick={onDetails}>Details<span className="sr-only"> for {event.title}</span></button><SelectEventButton className={styles.cardSelect} id={event.id}>Select<span className="sr-only"> {event.title}</span></SelectEventButton></div></div>
+      <div className={styles.eventCardBottom}><p className={styles.eventCardFee}>{frontendCurrency(event.officialFee)}</p><div><button className={styles.detailsButton} type="button" onClick={onDetails}>Details<span className="sr-only"> for {event.title}</span></button><SelectEventButton className={styles.cardSelect} id={event.id}>Select<span className="sr-only"> {event.title}</span></SelectEventButton></div></div>
     </article>
   );
 }
 
 export function EventsCatalog() {
   const [filter, setFilter] = useState("all");
-  const [detail, setDetail] = useState<FestivalEvent>(events[0]);
+  const [detail, setDetail] = useState<FrontendEvent>(frontendEvents[0]);
   const dialog = useRef<HTMLDialogElement>(null);
-  const displayedEvents = events.filter((event) => {
+  const displayedEvents = frontendEvents.filter((event) => {
     if (filter === "all") return true;
-    if (filter === "day1") return event.day === 1;
-    if (filter === "day2") return event.day === 2;
-    if (filter === "solo") return event.members === 1;
-    if (filter === "team") return event.members > 1;
+    if (filter === "day1") return event.officialDay === 1;
+    if (filter === "day2") return event.officialDay === 2;
+    if (filter === "solo") return event.officialMode.startsWith("Individual");
+    if (filter === "team") return !event.officialMode.startsWith("Individual");
     if (filter === "esports") return esportsEvents.has(event.id);
     return technicalEvents.has(event.id);
   });
 
-  function openDetails(event: FestivalEvent) {
+  function openDetails(event: FrontendEvent) {
     setDetail(event);
     dialog.current?.showModal();
   }
@@ -65,9 +66,11 @@ export function EventsCatalog() {
       <dialog ref={dialog} className={styles.eventModal} aria-labelledby="event-dialog-title" onClick={(e) => { if (e.target === e.currentTarget) dialog.current?.close(); }}>
         <button className={styles.modalClose} type="button" onClick={() => dialog.current?.close()} aria-label="Close event details"><Icon name="close" /></button>
         <div className={styles.eventIcon}><Icon name={detail.icon} /></div>
-        <p className={styles.eyebrow}>Day {detail.day} • {detail.date} October 2026</p>
-        <h2 className={styles.cyberHeading} id="event-dialog-title">{detail.title}</h2><p>{detail.description}</p>
-        <dl className={styles.eventDetails}><div><dt>Time slot</dt><dd>{detail.slot}</dd></div><div><dt>Participation</dt><dd>{detail.mode}</dd></div><div><dt>Venue</dt><dd>{detail.venue}</dd></div><div><dt>Registration fee</dt><dd>{currency(detail.fee)}{detail.feeUnit && `/${detail.feeUnit}`}</dd></div></dl>
+         <p className={styles.eyebrow}>{detail.officialDate} • {detail.officialStage}</p>
+         <h2 className={styles.cyberHeading} id="event-dialog-title">{detail.title}</h2><p>{detail.description}</p>
+         <dl className={styles.eventDetails}><div><dt>Starting time</dt><dd>{detail.officialTime}</dd></div><div><dt>Format</dt><dd>{detail.officialMode}</dd></div><div><dt>Venue</dt><dd>{detail.officialVenue}</dd></div><div><dt>Registration fee</dt><dd>{frontendCurrency(detail.officialFee)}</dd></div></dl>
+         <div className={styles.modalHosts}><span>Hosts</span><p>{detail.hosts.join(" · ")}</p></div>
+         <div className={styles.reportingNotice}><Icon name="location_on" /><p><strong>Pre-event reporting:</strong> All participants and teams must report to KP Nautiyal Auditorium, 5th Floor before their respective event.</p></div>
         <p className={styles.modalNote}>Check the master schedule before choosing your events. Overlapping time slots cannot be registered together.</p>
         <div onClick={() => dialog.current?.close()}><SelectEventButton className={`${styles.button} ${styles.primaryButton}`} id={detail.id}>Select for Registration <Icon name="arrow_forward" /></SelectEventButton></div>
       </dialog>

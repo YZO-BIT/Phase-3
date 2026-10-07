@@ -17,6 +17,7 @@
   min-height: 100vh;
   font-size: 15px;
   line-height: 24px;
+  overflow-x: hidden;
 }
 
 .cyber {
@@ -28,6 +29,7 @@
   --muted: #94a3b8;
   --outline: #64748b;
   font-family: var(--font-inter), sans-serif;
+  overflow-x: hidden;
 }
 
 .container { width: 100%; max-width: 1400px; margin-inline: auto; }
@@ -249,8 +251,10 @@
 
 /* Cyber competition grid */
 .catalogHeading { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+.catalogHeading > div:first-child { min-width: 0; }
 .catalogDescription { max-width: 576px; margin-top: 4px; color: var(--muted); }
 .tabs { display: flex; align-items: center; flex-wrap: wrap; padding: 4px; border: 1px solid rgb(58 73 75 / 60%); border-radius: 2px; background: var(--surface-lowest); }
+.tabs { min-width: 0; max-width: 100%; }
 .tabs button { padding: 6px 16px; border-radius: 2px; background: transparent; color: var(--muted); font-family: var(--font-space), sans-serif; font-size: 10px; line-height: 14px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
 .tabs button:hover { color: var(--text); }
 .tabs .activeTab { background: var(--primary); color: #00373a; box-shadow: 0 0 12px rgb(0 242 254 / 30%); }
@@ -273,6 +277,9 @@
 .eventDetails .eventTime { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
 .eventDetails .individualMode { color: #6ff6ff; }
 .eventDetails .teamMode { color: var(--violet); }
+.eventHosts, .modalHosts { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px; align-items: baseline; margin-top: 12px; padding-top: 8px; border-top: 1px solid rgb(58 73 75 / 24%); font-size: 12px; line-height: 18px; }
+.eventHosts > span, .modalHosts > span { color: var(--accent-muted); font-family: var(--font-space), sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+.eventHosts p, .modalHosts p { margin: 0; color: var(--text); text-align: right; }
 .eventCardBottom { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 24px; padding-top: 8px; border-top: 1px solid rgb(58 73 75 / 30%); }
 .eventCardFee { color: var(--mint); font-family: var(--font-space), sans-serif; font-size: 20px; line-height: 28px; font-weight: 700; }
 .eventCardFee > span { color: var(--muted); font-family: var(--font-inter), sans-serif; font-size: 13px; line-height: 20px; font-weight: 400; }
@@ -290,10 +297,23 @@
 .eventModal .eventDetails { margin-top: 24px; padding-block: 16px; }
 .modalClose { position: absolute; top: 16px; right: 16px; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; background: var(--surface-high); border-radius: 4px; }
 .modalNote { font-size: 13px; line-height: 20px; margin-bottom: 24px; }
+.reportingNotice { display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; margin-top: 16px; border: 1px solid rgb(14 230 184 / 35%); border-radius: 2px; background: rgb(14 230 184 / 8%); color: var(--muted); font-size: 12px; line-height: 18px; }
+.reportingNotice { min-width: 0; }
+.reportingNotice p { min-width: 0; overflow-wrap: anywhere; }
+.reportingNotice :global(.material-icon) { width: 20px; flex: 0 0 20px; overflow: hidden; flex-shrink: 0; color: var(--mint); font-size: 18px; }
+.reportingNotice p { margin: 0; }
+.reportingNotice strong { color: var(--mint); }
+.registrationReporting { display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; margin-bottom: 16px; border: 1px solid rgb(0 242 254 / 25%); border-radius: 2px; background: rgb(0 242 254 / 6%); color: var(--muted); font-size: 12px; line-height: 18px; }
+.registrationReporting { min-width: 0; }
+.registrationReporting p { min-width: 0; overflow-wrap: anywhere; }
 
 /* Cyber timetable */
 .scheduleMatrix { padding: 40px; border-radius: 8px; border: 1px solid rgb(58 73 75 / 50%); background: rgb(11 14 20 / 90%); }
+.scheduleReporting { margin-top: 16px; margin-bottom: 16px; }
 .matrixHeading { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: 16px; margin-bottom: 24px; border-bottom: 1px solid rgb(58 73 75 / 40%); }
+.matrixHeading > div:first-child { min-width: 0; }
+.matrixHeading { min-width: 0; }
+.matrixHeading .tabs { min-width: 0; max-width: 100%; }
 .matrixHeading .tabs { background: var(--surface-high); border: 0; gap: 4px; }
 .slotWarning { display: flex; align-items: center; gap: 4px; padding: 8px; border: 1px solid rgb(0 242 254 / 20%); border-radius: 2px; background: var(--surface); color: var(--muted); font-size: 13px; line-height: 20px; letter-spacing: 0.01em; margin-bottom: 16px; }
 .slotWarning :global(.material-icon) { color: var(--accent-muted); }
@@ -482,6 +502,8 @@
   .scheduleMatrix { padding: 20px; }
   .matrixHeading .tabs { gap: 4px; }
   .matrixHeading .tabs button { padding-inline: 8px; }
+  .matrixHeading .tabs { overflow-x: auto; flex-wrap: nowrap; width: 100%; }
+  .matrixHeading .tabs button { flex: 0 0 auto; }
   .slotWarning { align-items: flex-start; }
   .trackHeading { align-items: flex-start; flex-wrap: wrap; }
   .trackEvent { align-items: flex-start; flex-wrap: wrap; }
@@ -509,4 +531,115 @@
   .section, .footer { padding-inline: 20px; }
   .heroActions .button { flex-basis: 100%; }
   .eventCard { padding: 20px; }
+}
+
+/* Fluid cyber header below the desktop navigation breakpoint */
+@media (max-width: 1279px) {
+  .cyber {
+    --header-logo-row: clamp(40px, 5vw, 52px);
+    --header-brand-row: clamp(28px, 3vw, 36px);
+    --header-action-row: clamp(44px, 4vw, 50px);
+    --header-row-gap: clamp(8px, 1.5vw, 12px);
+    --header-padding: clamp(10px, 1.8vw, 14px);
+    --responsive-header-height: calc(var(--header-logo-row) + var(--header-brand-row) + var(--header-action-row) + 2 * var(--header-row-gap) + 2 * var(--header-padding));
+  }
+
+  .cyber .headerInner {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-areas:
+      "gehu . ieee"
+      "brand brand brand"
+      ". register menu";
+    grid-template-rows: var(--header-logo-row) minmax(var(--header-brand-row), auto) var(--header-action-row);
+    align-items: center;
+    column-gap: clamp(8px, 1.5vw, 16px);
+    row-gap: var(--header-row-gap);
+    height: auto;
+    padding-inline: clamp(12px, 4vw, 32px);
+    padding-block: var(--header-padding);
+  }
+
+  .cyber .headerIdentity,
+  .cyber .headerActions {
+    display: contents;
+  }
+
+  .cyber .desktopNav,
+  .cyber .headerIdentity .headerDivider,
+  .cyber .headerActions > .headerDivider {
+    display: none;
+  }
+
+  .cyber .universityLogo {
+    grid-area: gehu;
+    width: clamp(110px, 18vw, 150px);
+    max-width: 100%;
+    min-width: 0;
+    justify-self: start;
+  }
+
+  .cyber .ieeeLockup {
+    grid-area: ieee;
+    width: clamp(84px, 12vw, 108px);
+    max-width: 100%;
+    min-width: 0;
+    justify-self: end;
+  }
+
+  .cyber .brand {
+    grid-area: brand;
+    display: flex;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: clamp(8px, 1.5vw, 14px);
+    row-gap: 4px;
+  }
+
+  .cyber .header .wordmark {
+    max-width: 100%;
+    font-size: clamp(22px, 3.2vw, 30px);
+    line-height: 1.15;
+    white-space: nowrap;
+  }
+
+  .cyber .header .phaseBadge {
+    min-height: clamp(22px, 3.2vw, 28px);
+    padding: clamp(3px, 0.6vw, 6px) clamp(7px, 1vw, 10px);
+    font-size: clamp(8px, 1.2vw, 10px);
+  }
+
+  .cyber .headerRegister {
+    grid-area: register;
+    justify-self: center;
+    min-width: clamp(112px, 17vw, 148px);
+    min-height: var(--header-action-row);
+    padding-inline: clamp(12px, 1.8vw, 22px);
+    font-size: clamp(10px, 1.3vw, 13px);
+  }
+
+  .cyber .mobileNav {
+    position: relative;
+    display: block;
+    grid-area: menu;
+    justify-self: end;
+  }
+
+  .cyber .menuButton {
+    width: 44px;
+    height: 44px;
+  }
+
+  .cyber .mobileMenu {
+    top: calc(100% + 8px);
+    right: 0;
+  }
+
+  .cyber .main {
+    padding-top: calc(var(--responsive-header-height) + 1px);
+  }
 }

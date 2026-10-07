@@ -56,6 +56,10 @@
 .stepBanner > span:first-child { font-size: 10px; line-height: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent-muted); }
 .stepBanner > span:last-child { font-size: 13px; line-height: 20px; letter-spacing: 0.01em; color: var(--muted); }
 .conflictNotice { display: flex; align-items: flex-start; gap: 8px; padding: 16px; margin-bottom: 16px; border: 1px solid rgb(0 242 254 / 80%); background: var(--surface); }
+.registrationReporting { display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; margin-bottom: 16px; border: 1px solid rgb(0 242 254 / 25%); border-radius: 2px; background: rgb(0 242 254 / 6%); color: var(--muted); font-size: 12px; line-height: 18px; }
+.registrationReporting :global(.material-icon) { width: 20px; flex: 0 0 20px; overflow: hidden; flex-shrink: 0; color: var(--accent-muted); font-size: 18px; }
+.registrationReporting p { margin: 0; }
+.registrationReporting strong { color: var(--accent-muted); }
 .conflictNotice > :global(.material-icon) { color: var(--accent-muted); }
 .conflictNotice > div { flex: 1; min-width: 0; }
 .conflictNotice strong { color: var(--primary-pale); text-transform: uppercase; font-size: 11px; line-height: 16px; letter-spacing: 0.05em; }

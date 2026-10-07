@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { currency, type FestivalEvent } from "@/lib/events";
+import { frontendCurrency, frontendEventById } from "@/lib/frontend-events";
 import type { RegistrationView } from "@/lib/registration-data";
 import { Icon } from "../Icon";
 import type { Participant } from "./ParticipantFields";
@@ -14,7 +15,7 @@ export function TeamFields({ participant, selectedEvents, teamName, setTeamName,
   members: TeamMember[]; setMembers: (members: TeamMember[]) => void;
 }) {
   const [alternate, setAlternate] = useState(false);
-  const teamEvents = selectedEvents.filter((event) => event.members > 1);
+  const teamEvents = selectedEvents.filter((event) => !(frontendEventById.get(event.id)?.officialMode.startsWith("Individual") ?? event.members === 1));
   const memberCount = Math.max(1, ...teamEvents.map((event) => event.members)) - 1;
 
   function updateMember(index: number, field: keyof TeamMember, value: string) {
@@ -42,13 +43,13 @@ export function TeamFields({ participant, selectedEvents, teamName, setTeamName,
 
 export function Review({ participant, selectedEvents, total, teamName, members, agreements, setAgreements }: { participant: Participant; selectedEvents: FestivalEvent[]; total: number; teamName: string; members: TeamMember[]; agreements: { authentic: boolean; conduct: boolean }; setAgreements: (agreements: { authentic: boolean; conduct: boolean }) => void }) {
   const details = [["Full Name", participant.name], ["Enrollment ID", participant.enrollment], ["Email Address", participant.email], ["Phone / WhatsApp", participant.phone], ["College", participant.college], ["City", participant.city]];
-  const teamEvents = selectedEvents.filter((event) => event.members > 1);
+  const teamEvents = selectedEvents.filter((event) => !(frontendEventById.get(event.id)?.officialMode.startsWith("Individual") ?? event.members === 1));
   return <div className={styles.registryPanel}>
     <p className={styles.stepLabel}>Candidate Record</p><dl className={styles.reviewDetails}>{details.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
     <p className={styles.stepLabel}>Selected Battle Tracks</p>
-    <div className={styles.reviewEvents}>{selectedEvents.map((event) => <div key={event.id}><div><strong>{event.title}</strong><p>{event.date} Oct • {event.slot} • {event.mode}</p></div><span>{currency(event.fee)}</span></div>)}</div>
+    <div className={styles.reviewEvents}>{selectedEvents.map((event) => { const official = frontendEventById.get(event.id); return <div key={event.id}><div><strong>{event.title}</strong><p>{official?.officialDate ?? `${event.date} Oct`} • {official?.officialTime ?? event.slot} • {official?.officialMode ?? event.mode}</p></div><span>{official ? frontendCurrency(official.officialFee) : currency(event.fee)}</span></div>; })}</div>
     {teamEvents.length > 0 && <div className={styles.reviewRoster}><p className={styles.stepLabel}>Team Roster • {teamName}</p><p>{participant.name} (Captain){members.slice(0, Math.max(...teamEvents.map((event) => event.members)) - 1).map((member) => ` • ${member.name}`).join("")}</p></div>}
-    <div className={styles.reviewTotals}><div><span>Track Subtotal:</span><strong>{currency(total)}.00</strong></div><div><span>IEEE SB Processing:</span><span>₹0.00 (Waived)</span></div><div><strong>Total Payable:</strong><strong>{currency(total)}.00</strong></div></div>
+     <div className={styles.reviewTotals}><div><span>Track Subtotal:</span><strong>{frontendCurrency(selectedEvents.reduce((sum, event) => sum + (frontendEventById.get(event.id)?.officialFee ?? event.fee), 0))}.00</strong></div><div><span>IEEE SB Processing:</span><span>₹0.00 (Waived)</span></div><div><strong>Total Payable:</strong><strong>{frontendCurrency(selectedEvents.reduce((sum, event) => sum + (frontendEventById.get(event.id)?.officialFee ?? event.fee), 0))}.00</strong></div></div>
     <div className={styles.agreements}><label><input type="checkbox" checked={agreements.authentic} onChange={(event) => setAgreements({ ...agreements, authentic: event.target.checked })} required /><span>I confirm that all entered details, department codes, and university enrollment IDs are authentic.</span></label><label><input type="checkbox" checked={agreements.conduct} onChange={(event) => setAgreements({ ...agreements, conduct: event.target.checked })} required /><span>I agree to the IEEE SB GEHU Code of Conduct, tournament anti-cheat protocols, and conflict scheduling guidelines.</span></label></div>
   </div>;
 }
@@ -110,7 +111,7 @@ export function Confirmation({ participant, selectedEvents, registration, onRefr
   const pdfLabel = approved ? "Pass Available" : "PDF Not Ready";
   return <div className={styles.confirmation}>
      <div className={styles.successIcon}><Icon name={approved ? "verified" : rejected ? "error" : "schedule"} /></div><p className={styles.stepLabel}>{paymentLabel}</p><h3>{approved ? "Registration Confirmed" : rejected ? "Payment verification failed" : "Payment Verification Pending"}</h3><p>{approved ? "Your approved pass is available to view or download." : rejected ? registration.remarks || "The payment proof was rejected. Contact the organizer desk for assistance." : "Your payment screenshot is queued for administrator verification. The pass will become available after approval."}</p>
-     <dl className={styles.confirmationSummary}><div><dt>Registration ID:</dt><dd>{registration.id}</dd></div><div><dt>Registered Candidate:</dt><dd>{participant.name} ({participant.enrollment})</dd></div><div><dt>Event Details:</dt><dd>{selectedEvents.map((event) => `${event.title} · ${event.date} Oct · ${event.venue}`).join(" + ")}</dd></div><div><dt>Payment Status:</dt><dd>{paymentLabel}</dd></div><div><dt>Screenshot:</dt><dd>RECEIVED</dd></div><div><dt>Pass Status:</dt><dd>{pdfLabel}</dd></div><div><dt>Official Venue:</dt><dd>GEHU Clement Town Campus, Dehradun</dd></div>{rejected && <div><dt>Remarks:</dt><dd>{registration.remarks || "No remarks provided."}</dd></div>}</dl>
+      <dl className={styles.confirmationSummary}><div><dt>Registration ID:</dt><dd>{registration.id}</dd></div><div><dt>Registered Candidate:</dt><dd>{participant.name} ({participant.enrollment})</dd></div><div><dt>Event Details:</dt><dd>{selectedEvents.map((event) => { const official = frontendEventById.get(event.id); return `${event.title} · ${official?.officialDate ?? `${event.date} Oct`} · ${official?.officialVenue ?? event.venue}`; }).join(" + ")}</dd></div><div><dt>Payment Status:</dt><dd>{paymentLabel}</dd></div><div><dt>Screenshot:</dt><dd>RECEIVED</dd></div><div><dt>Pass Status:</dt><dd>{pdfLabel}</dd></div><div><dt>Official Venue:</dt><dd>GEHU Clement Town Campus, Dehradun</dd></div>{rejected && <div><dt>Remarks:</dt><dd>{registration.remarks || "No remarks provided."}</dd></div>}</dl>
      {pending && <p className={styles.statusNote} role="status">Payment Verification Pending · PDF Not Ready</p>}
      <div className={styles.confirmationActions}>{approved && <a className={styles.nextButton} href={registration.pdfUrl!}><Icon name="file_download" />Download Registration PDF</a>}{registration.paymentStatus === "PENDING" && <button type="button" className={styles.backButton} onClick={() => void refresh()} disabled={refreshing}><Icon name="refresh" />{refreshing ? "Checking Status…" : "Refresh Status"}</button>}{registration.paymentStatus !== "REJECTED" && <a className={styles.backButton} href={calendarUrl} target="_blank" rel="noopener noreferrer"><Icon name="calendar_add_on" />Add to Calendar</a>}<button type="button" className={styles.textButton} onClick={onReset}>Return to Portal Home</button></div>
   </div>;
