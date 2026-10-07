@@ -10,14 +10,14 @@ export function Footer({ variant }: { variant: PortalVariant }) {
         <div className={styles.footerGrid}>
           <div className={styles.footerBrand}>
             <div><span className={styles.wordmark}>technIEEEks’26</span>{cyber && <span className={styles.phaseBadge}>Phase 3</span>}</div>
-            <p className={styles.footerInstitution}>{cyber ? "IEEE Student Branch Graphic Era Hill University, Dehradun." : "IEEE Student Branch • Graphic Era Hill University"}</p>
+            <p className={styles.footerInstitution}>{cyber ? <>Graphic Era Hill University<br />IEEE Student Branch</> : "IEEE Student Branch • Graphic Era Hill University"}</p>
             <p className={styles.footerTagline}>{cyber ? '"Think • Play • Strategize • Win."' : "“Think • Play • Strategize • Win.”"}</p>
             {cyber && <p className={styles.footerDescription}>The premier technical symposium and esports arena engineered for university innovators, coders, and system strategists.</p>}
           </div>
           <nav className={styles.footerNav} aria-label="Footer navigation">
             <h2>{cyber ? "Quick Navigation" : "Quick Links"}</h2>
-            <a href="#events">{cyber ? "Events Catalog" : "Events"}</a><a href="#schedule">{cyber ? "Tournament Schedule" : "Schedule"}</a><a href="#rules">{cyber ? "Official Rulebook" : "Rules"}</a>
-            {cyber ? <><a href="#register">Registration Portal</a><details className={styles.footerFaq}><summary>Frequently Asked Questions</summary><p>Register for multiple events when their time slots do not overlap. A team captain completes the squad registration. For further questions, contact the organizer desk.</p></details></> : <a href="#rules">Rulebook PDF</a>}
+            <a href="#events">Events</a><a href="#schedule">Schedule</a><a href="#rules">Rules</a><a href="#register">Register</a>
+            {cyber ? <details className={styles.footerFaq}><summary>Frequently Asked Questions</summary><p>Register for multiple events when their time slots do not overlap. A team captain completes the squad registration. For further questions, contact the organizer desk.</p></details> : <a href="#rules">Rulebook PDF</a>}
           </nav>
           <div className={styles.footerContact}>
             <h2>{cyber ? "Organizer & Desk Contact" : "Desk Contact"}</h2>

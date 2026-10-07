@@ -8,9 +8,16 @@ import styles from "./Portal.module.css";
 
 const filters = [
   { id: "all", label: "All Events (10)" },
-  { id: "day1", label: "Day 1: Oct 16 (5)" },
-  { id: "day2", label: "Day 2: Oct 17 (5)" },
+  { id: "day1", label: "Day 1 (5)" },
+  { id: "day2", label: "Day 2 (5)" },
+  { id: "solo", label: "Solo" },
+  { id: "team", label: "Team" },
+  { id: "esports", label: "Esports" },
+  { id: "technical", label: "Technical" },
 ];
+
+const esportsEvents = new Set(["bgmi", "ff", "val", "karts", "royale"]);
+const technicalEvents = new Set(["cp", "ctf"]);
 
 function EventCard({ event, onDetails }: { event: FestivalEvent; onDetails: () => void }) {
   return (
@@ -33,7 +40,15 @@ export function EventsCatalog() {
   const [filter, setFilter] = useState("all");
   const [detail, setDetail] = useState<FestivalEvent>(events[0]);
   const dialog = useRef<HTMLDialogElement>(null);
-  const displayedEvents = events.filter((event) => filter === "all" || (filter === "day1" ? event.day === 1 : event.day !== 1));
+  const displayedEvents = events.filter((event) => {
+    if (filter === "all") return true;
+    if (filter === "day1") return event.day === 1;
+    if (filter === "day2") return event.day === 2;
+    if (filter === "solo") return event.members === 1;
+    if (filter === "team") return event.members > 1;
+    if (filter === "esports") return esportsEvents.has(event.id);
+    return technicalEvents.has(event.id);
+  });
 
   function openDetails(event: FestivalEvent) {
     setDetail(event);
@@ -43,8 +58,8 @@ export function EventsCatalog() {
   return (
     <section id="events" className={`${styles.container} ${styles.cyberSection}`} aria-labelledby="events-title">
       <div className={styles.catalogHeading}>
-        <div><span className={styles.eyebrow}>Battle Matrix &amp; Tracks</span><h2 className={styles.cyberHeading} id="events-title">10 High-Stakes Competitions</h2><p className={styles.catalogDescription}>Explore all sanctioned Phase 3 tracks. Check timings carefully to prevent scheduling gridlocks.</p></div>
-        <div className={styles.tabs} role="group" aria-label="Filter competitions by date">{filters.map((item) => <button className={filter === item.id ? styles.activeTab : ""} key={item.id} aria-pressed={filter === item.id} onClick={() => setFilter(item.id)} type="button">{item.label}</button>)}</div>
+        <div><span className={styles.eyebrow}>Battle Matrix &amp; Tracks</span><h2 className={styles.cyberHeading} id="events-title">10 Competition Signals</h2><p className={styles.catalogDescription}>Review each sanctioned track, timing, venue, and participation mode before selecting a registration slot.</p></div>
+        <div className={styles.tabs} role="group" aria-label="Filter competitions">{filters.map((item) => <button className={filter === item.id ? styles.activeTab : ""} key={item.id} aria-pressed={filter === item.id} onClick={() => setFilter(item.id)} type="button">{item.label}</button>)}</div>
       </div>
       <div className={styles.eventsGrid}>{displayedEvents.map((event) => <EventCard key={event.id} event={event} onDetails={() => openDetails(event)} />)}</div>
       <dialog ref={dialog} className={styles.eventModal} aria-labelledby="event-dialog-title" onClick={(e) => { if (e.target === e.currentTarget) dialog.current?.close(); }}>

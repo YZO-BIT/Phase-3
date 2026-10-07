@@ -1,5 +1,5 @@
 import { Portal } from "@/components/Portal";
 
 export default function HomePage() {
-  return <Portal variant="editorial" />;
+  return <Portal variant="cyber" />;
 }

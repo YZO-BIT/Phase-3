@@ -12,11 +12,11 @@ import portalStyles from "../Portal.module.css";
 import styles from "./Registration.module.css";
 
 const steps = [
-  ["Participant", "Primary Info"], ["Events", "Tracks & Guard"], ["Team Roster", "Squad Details"],
-  ["Review", "Verification"], ["Payment", "UPI Settlement"], ["Status", "Confirmation"],
+  ["Your Details", "Primary information"], ["Choose Events", "Tracks & conflict guard"], ["Team Details", "Squad information"],
+  ["Review", "Verification"], ["Payment", "UPI settlement"], ["Confirmation", "Registration status"],
 ];
 const editorialSteps = ["Personal Record", "Select Events", "Team Roster", "Audit Summary", "Gateway Payment", "Dossier Pass"];
-const stepTitles = ["Participant Information", "Select Your Battles (Conflict Guard Active)", "Squad & Team Specification", "Manifest Review & Verification", "Settlement & Verification Channel", "Confirmation"];
+const stepTitles = ["Your Details", "Choose Events (Conflict Guard Active)", "Team Details", "Review & Verification", "Payment", "Confirmation"];
 
 const emptyParticipant: Participant = {
   name: "", enrollment: "", email: "", phone: "", college: "", city: "", branch: "CSE (Core)", year: "3rd Year",

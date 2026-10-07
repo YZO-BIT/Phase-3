@@ -3,11 +3,11 @@ import { Icon } from "./Icon";
 import styles from "./Portal.module.css";
 
 const editorialStats = [
-  ["Total Purse", "₹1,20,000+"], ["Sanctioned Brackets", "10 Contests"],
+  ["Sanctioned Brackets", "10 Contests"],
   ["Host Venue", "Tech Block & Arenas"], ["Governance", "IEEE Code SEC.04"],
 ];
 const cyberStats = [
-  ["High-Stakes Events", "10"], ["Intense Arena Days", "02"],
+  ["High-Stakes Events", "10"], ["Competition Days", "02"],
   ["Expected Competitors", "500+"], ["Grand Champion Trophy", "01"],
 ];
 
@@ -17,17 +17,17 @@ export function Hero({ variant }: { variant: PortalVariant }) {
     <section id="home" className={`${styles.container} ${styles.cyberHero}`} aria-labelledby="hero-title">
       <div className={styles.heroBadge}><span className={styles.statusDot} />Phase 3 • IEEE SB GEHU • Official Registration Portal</div>
       <h1 id="hero-title" className={styles.cyberHeroTitle}>technIEEEks’26</h1>
-      <p className={styles.cyberTagline}>&quot;Think • Play • Strategize • Win.&quot;</p>
-      <p className={styles.heroDescription}>A two-day high-octane multi-domain technical symposium &amp; esports arena engineered for university innovators, cybersecurity analysts, strategists, and elite gamers.</p>
+      <p className={styles.cyberTagline}>Think • Play • Strategize • Win.</p>
+      <p className={styles.heroDescription}>A two-day technical symposium and esports arena for university innovators, cybersecurity analysts, strategists, and competitive gamers.</p>
       <div className={styles.metadataBar}>
         <div><Icon name="calendar_month" /><span>16 • 17 October 2026</span></div>
-        <div><Icon name="pin_drop" /><span>GEHU Campus, Dehradun</span></div>
-        <div><Icon name="trophy" /><span>10 Events • ₹1,50,000+ Pool</span></div>
+        <div><Icon name="pin_drop" /><span>Graphic Era Hill University, Dehradun</span></div>
+        <div><Icon name="grid_view" /><span>10 Events • 3 Tracks</span></div>
       </div>
       <div className={styles.cyberHeroActions}>
         <a className={`${styles.button} ${styles.primaryButton}`} href="#register">Register Now <Icon name="bolt" /></a>
-        <a className={`${styles.button} ${styles.secondaryButton}`} href="#events">Explore 10 Events <Icon name="grid_view" /></a>
-        <a className={`${styles.button} ${styles.rulebookButton}`} href="#rules"><Icon name="file_download" />Download Rulebook (PDF)</a>
+        <a className={`${styles.button} ${styles.secondaryButton}`} href="#events">Explore Events <Icon name="grid_view" /></a>
+        <a className={`${styles.button} ${styles.rulebookButton}`} href="#rules"><Icon name="file_download" />View Rulebook</a>
       </div>
       <div className={styles.cyberStats}>{cyberStats.map(([label, value]) => (
         <div key={label}><strong>{value}</strong><span>{label}</span></div>

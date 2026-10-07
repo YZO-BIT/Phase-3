@@ -17,6 +17,15 @@ const cyberRules = [
   { icon: "policy", title: "IEEE Code of Ethics", text: "Unfair exploits, unauthorized scripts in esports, or code plagiarism will trigger immediate banishment." },
 ];
 
+const faqItems = [
+  ["Rulebook", "Use the protocol panel and schedule below to check event rules, timings, venues, and conflicts."],
+  ["Refunds", "Review the applicable event policy with the organizer desk before completing payment."],
+  ["ID Required", "Keep a university enrollment ID or institutional identity card ready for credential checks."],
+  ["Team Changes", "The team captain should complete the roster; contact the desk before requesting a roster correction."],
+  ["Payment Verification", "Upload a clear payment screenshot and enter the UTR. The registration remains pending until review."],
+  ["Support", "Use the desk contact in the footer for registration, schedule, or payment questions."],
+] as const;
+
 export function Protocols({ variant }: { variant: PortalVariant }) {
   if (variant === "cyber") return (
     <section id="rules" className={`${styles.container} ${styles.cyberProtocols}`} aria-labelledby="rules-title">
@@ -28,8 +37,9 @@ export function Protocols({ variant }: { variant: PortalVariant }) {
         <div className={styles.noticeRules}>{cyberRules.map((rule) => (
           <div key={rule.title}><Icon name={rule.icon} /><p><strong>{rule.title}:</strong> {rule.text}</p></div>
         ))}</div>
-        <div className={styles.noticeFootnote}><p><Icon name="info" />Our automated real-time conflict detector will block overlapping slot combinations inside the Registration Engine below.</p><a href="#register">Jump to Wizard <Icon name="arrow_downward" /></a></div>
-      </div>
+        <div className={styles.noticeFootnote}><p><Icon name="info" />Overlapping slots are shown before selection and checked again by the registration service.</p><a href="#rules">View Rulebook / Consult Rules <Icon name="arrow_forward" /></a></div>
+        <div className={styles.faqGrid} aria-label="Rules and frequently asked questions">{faqItems.map(([title, text]) => <details key={title}><summary>{title}</summary><p>{text}</p></details>)}</div>
+       </div>
     </section>
   );
 

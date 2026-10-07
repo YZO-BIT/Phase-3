@@ -17,7 +17,7 @@ export function Header({ variant }: { variant: PortalVariant }) {
       <div className={styles.headerInner}>
         <div className={styles.headerIdentity}>
           <a className={styles.universityLogo} href="#home" aria-label="Graphic Era Hill University home">
-            <Image src="/assets/gehu-logo.png" alt="Graphic Era Hill University, Dehradun" width={335} height={96} sizes="(max-width: 767px) 136px, (max-width: 1279px) 180px, 214px" priority />
+            <Image src="/assets/gehu-phase03-logo.png" alt="Graphic Era Hill University, Dehradun" width={335} height={96} sizes="(max-width: 767px) 136px, (max-width: 1279px) 180px, 214px" priority />
           </a>
           <span className={styles.headerDivider} aria-hidden="true" />
           <a className={styles.brand} href="#home" aria-label="technIEEEks’26 home">
@@ -31,7 +31,7 @@ export function Header({ variant }: { variant: PortalVariant }) {
         <div className={styles.headerActions}>
           <span className={styles.headerDivider} aria-hidden="true" />
           <div className={styles.ieeeLockup}>
-            <Image src="/assets/ieee-gehu-logo.png" alt="IEEE Graphic Era Hill University Student Branch" width={221} height={106} sizes="(max-width: 1279px) 116px, 150px" priority />
+            <Image src="/assets/ieee-phase03-logo.png" alt="IEEE Graphic Era Hill University Student Branch" width={221} height={106} sizes="(max-width: 1279px) 116px, 150px" priority />
           </div>
           <a className={styles.headerRegister} href="#register"><span>REGISTER</span><span aria-hidden="true">→</span></a>
           <MobileNav links={links} />

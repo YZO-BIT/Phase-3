@@ -23,7 +23,7 @@ export function ParticipantFields({ variant, value, onChange }: { variant: Porta
     <div className={`${styles.fields} ${cyber ? styles.cyberFields : ""}`}>
       {fields.map((field) => <div className={`${styles.field} ${field.key === "college" && !cyber ? styles.fullWidth : ""}`} key={field.key}>
         <label htmlFor={`participant-${field.key}`}>{cyber ? field.cyber : field.editorial}</label>
-        <div className={styles.inputWrap}><input id={`participant-${field.key}`} name={field.key} type={field.type} placeholder={field.placeholder} autoComplete={field.autocomplete} value={value[field.key]} onChange={(e) => onChange(field.key, e.target.value)} required />{cyber && field.key !== "college" && value[field.key] && <Icon name="check_circle" />}</div>
+        <div className={styles.inputWrap}><input id={`participant-${field.key}`} name={field.key} type={field.type} inputMode={field.key === "phone" ? "numeric" : undefined} placeholder={field.placeholder} autoComplete={field.autocomplete} value={value[field.key]} onChange={(e) => onChange(field.key, e.target.value)} required />{cyber && field.key !== "college" && value[field.key] && <Icon name="check_circle" />}</div>
       </div>)}
       <div className={cyber ? styles.compactFields : styles.displayContents}>
         <div className={styles.field}><label htmlFor="participant-branch">{cyber ? "Branch / Dept *" : "Academic Department"}</label><select id="participant-branch" name="branch" value={value.branch} onChange={(e) => onChange("branch", e.target.value)} required>{branches.map((branch) => <option key={branch}>{branch}</option>)}</select></div>
