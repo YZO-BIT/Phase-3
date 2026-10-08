@@ -1,4 +1,5 @@
-import { currency, editorialEvents } from "@/lib/events";
+import { currency } from "@/lib/events";
+import { frontendEditorialEvents } from "@/lib/frontend-events";
 import { SelectEventButton } from "./SelectEventButton";
 import styles from "./Portal.module.css";
 
@@ -10,7 +11,7 @@ export function EventsList() {
           <div><span className={styles.eyebrow}>Sanctioned Brackets • 16–17 Oct 2026</span><h2 id="events-title" className={styles.largeHeading}>Events / 10</h2></div>
           <p>Select bracket slots for registration integration. Slot quotas strictly capped per room capacity.</p>
         </div>
-        <div className={styles.eventsList}>{editorialEvents.map((event, index) => (
+        <div className={styles.eventsList}>{frontendEditorialEvents.map((event, index) => (
           <article className={styles.eventRow} key={event.id}>
             <span className={styles.eventNumber}>{String(index + 1).padStart(2, "0")}</span>
             <div className={styles.eventRowTitle}><div><h3>{event.title}</h3>{event.id === "ctf" && <span className={styles.criticalBadge}>Critical</span>}</div><p>{event.editorialDescription}</p></div>

@@ -4,9 +4,9 @@ import { events, getConflictingEvent } from "../lib/events";
 
 test("every Phase 3 event has its final date and preserved start time and price", () => {
   const expected: Record<string, [number, number, number]> = {
-    bgmi: [16, 600, 400], ff: [16, 690, 350], karts: [16, 960, 80],
-    val: [16, 570, 500], royale: [16, 660, 100], cp: [17, 600, 150],
-    ctf: [17, 660, 300], chess: [17, 840, 100], hunt: [17, 870, 250], trivia: [17, 900, 80],
+    bgmi: [16, 600, 300], ff: [16, 690, 300], karts: [16, 960, 80],
+    val: [16, 570, 500], royale: [16, 660, 80], cp: [17, 600, 100],
+    ctf: [17, 660, 100], chess: [17, 840, 100], hunt: [17, 870, 300], trivia: [17, 900, 80],
   };
   assert.equal(events.length, 10);
   for (const event of events) {

@@ -1,11 +1,10 @@
-import { events, type FestivalEvent } from "./events";
+import { editorialEvents, events, type FestivalEvent } from "./events";
 
 export type FrontendEvent = FestivalEvent & {
   officialDate: string;
   officialDay: 1 | 2;
   officialTime: string;
   officialStage: string;
-  officialFee: number;
   officialVenue: string;
   officialMode: string;
   officialMembers?: number;
@@ -19,7 +18,6 @@ const officialDetails: Record<string, Omit<FrontendEvent, keyof FestivalEvent>> 
     officialDay: 2,
     officialTime: "10:00 AM",
     officialStage: "Technical / Day 2",
-    officialFee: 100,
     officialVenue: "TCL 302A",
     officialMode: "Individual",
     hosts: ["Akshat", "Yash"],
@@ -30,7 +28,6 @@ const officialDetails: Record<string, Omit<FrontendEvent, keyof FestivalEvent>> 
     officialDay: 2,
     officialTime: "10:00 AM",
     officialStage: "Technical / Day 2",
-    officialFee: 100,
     officialVenue: "TCL 302B",
     officialMode: "Individual",
     officialMembers: 1,
@@ -42,7 +39,6 @@ const officialDetails: Record<string, Omit<FrontendEvent, keyof FestivalEvent>> 
     officialDay: 2,
     officialTime: "11:00 AM",
     officialStage: "Technical / Day 2",
-    officialFee: 100,
     officialVenue: "Sports Arena",
     officialMode: "Individual",
     hosts: ["Abhinav", "Saksham", "Tanishka"],
@@ -53,7 +49,6 @@ const officialDetails: Record<string, Omit<FrontendEvent, keyof FestivalEvent>> 
     officialDay: 2,
     officialTime: "12:00 PM",
     officialStage: "Other Competition / Day 2",
-    officialFee: 250,
     officialVenue: "Sports Ground",
     officialMode: "Team (3–4 Players)",
     hosts: ["Ananya", "Ayushi", "Jhalak", "Vandana"],
@@ -64,7 +59,6 @@ const officialDetails: Record<string, Omit<FrontendEvent, keyof FestivalEvent>> 
     officialDay: 1,
     officialTime: "9:00 AM · Qualifying Rounds 1 & 2",
     officialStage: "Esports Qualifying",
-    officialFee: 250,
     officialVenue: "Seminar Hall",
     officialMode: "Squad (4 Players)",
     hosts: ["Abhinav", "Yuvraj", "Raghav"],
@@ -75,7 +69,6 @@ const officialDetails: Record<string, Omit<FrontendEvent, keyof FestivalEvent>> 
     officialDay: 1,
     officialTime: "9:00 AM · Qualifying Rounds 1 & 2",
     officialStage: "Esports Qualifying",
-    officialFee: 250,
     officialVenue: "Meeting Hall",
     officialMode: "Squad (4 Players)",
     hosts: ["Saksham", "Ayushi"],
@@ -86,7 +79,6 @@ const officialDetails: Record<string, Omit<FrontendEvent, keyof FestivalEvent>> 
     officialDay: 1,
     officialTime: "9:00 AM · Qualifying Rounds 1 & 2",
     officialStage: "Esports Qualifying",
-    officialFee: 500,
     officialVenue: "TCL 302A & TCL 302B",
     officialMode: "Team (5 Players)",
     hosts: ["Yash", "Purvansh", "Tanishka"],
@@ -97,7 +89,6 @@ const officialDetails: Record<string, Omit<FrontendEvent, keyof FestivalEvent>> 
     officialDay: 1,
     officialTime: "9:00 AM · Qualifying Round 1",
     officialStage: "Esports Qualifying",
-    officialFee: 50,
     officialVenue: "CR 117",
     officialMode: "Individual",
     hosts: ["Sachin", "Sumit", "Ananya"],
@@ -108,7 +99,6 @@ const officialDetails: Record<string, Omit<FrontendEvent, keyof FestivalEvent>> 
     officialDay: 1,
     officialTime: "9:00 AM · Qualifying Round 1",
     officialStage: "Esports Qualifying",
-    officialFee: 50,
     officialVenue: "CR 116",
     officialMode: "Individual",
     hosts: ["Yash", "Akshat", "Aadarsh"],
@@ -119,7 +109,6 @@ const officialDetails: Record<string, Omit<FrontendEvent, keyof FestivalEvent>> 
     officialDay: 1,
     officialTime: "1:00 PM",
     officialStage: "Other Competition / Day 1",
-    officialFee: 50,
     officialVenue: "CR 116",
     officialMode: "Individual",
     hosts: ["Jhalak", "Archit"],
@@ -127,12 +116,18 @@ const officialDetails: Record<string, Omit<FrontendEvent, keyof FestivalEvent>> 
   },
 };
 
+// Fees come from the authoritative event table; this overlay only supplies presentation details.
 export const frontendEvents: FrontendEvent[] = events.map((event) => ({
   ...event,
   ...officialDetails[event.id],
 }));
 
 export const frontendEventById = new Map(frontendEvents.map((event) => [event.id, event]));
+
+export const frontendEditorialEvents = editorialEvents.map((event) => ({
+  ...event,
+  fee: frontendEventById.get(event.id)!.fee,
+}));
 
 export const openingCeremony = {
   date: "16 October 2026",

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { currency, type FestivalEvent } from "@/lib/events";
-import { frontendCurrency, frontendEventById } from "@/lib/frontend-events";
+import { frontendEventById } from "@/lib/frontend-events";
 import type { RegistrationView } from "@/lib/registration-data";
 import { Icon } from "../Icon";
 import type { Participant } from "./ParticipantFields";
@@ -47,9 +47,9 @@ export function Review({ participant, selectedEvents, total, teamName, members, 
   return <div className={styles.registryPanel}>
     <p className={styles.stepLabel}>Candidate Record</p><dl className={styles.reviewDetails}>{details.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
     <p className={styles.stepLabel}>Selected Battle Tracks</p>
-    <div className={styles.reviewEvents}>{selectedEvents.map((event) => { const official = frontendEventById.get(event.id); return <div key={event.id}><div><strong>{event.title}</strong><p>{official?.officialDate ?? `${event.date} Oct`} • {official?.officialTime ?? event.slot} • {official?.officialMode ?? event.mode}</p></div><span>{official ? frontendCurrency(official.officialFee) : currency(event.fee)}</span></div>; })}</div>
+    <div className={styles.reviewEvents}>{selectedEvents.map((event) => { const official = frontendEventById.get(event.id); return <div key={event.id}><div><strong>{event.title}</strong><p>{official?.officialDate ?? `${event.date} Oct`} • {official?.officialTime ?? event.slot} • {official?.officialMode ?? event.mode}</p></div><span>{currency(event.fee)}</span></div>; })}</div>
     {teamEvents.length > 0 && <div className={styles.reviewRoster}><p className={styles.stepLabel}>Team Roster • {teamName}</p><p>{participant.name} (Captain){members.slice(0, Math.max(...teamEvents.map((event) => event.members)) - 1).map((member) => ` • ${member.name}`).join("")}</p></div>}
-     <div className={styles.reviewTotals}><div><span>Track Subtotal:</span><strong>{frontendCurrency(selectedEvents.reduce((sum, event) => sum + (frontendEventById.get(event.id)?.officialFee ?? event.fee), 0))}.00</strong></div><div><span>IEEE SB Processing:</span><span>₹0.00 (Waived)</span></div><div><strong>Total Payable:</strong><strong>{frontendCurrency(selectedEvents.reduce((sum, event) => sum + (frontendEventById.get(event.id)?.officialFee ?? event.fee), 0))}.00</strong></div></div>
+    <div className={styles.reviewTotals}><div><span>Track Subtotal:</span><strong>{currency(total)}.00</strong></div><div><span>IEEE SB Processing:</span><span>₹0.00 (Waived)</span></div><div><strong>Total Payable:</strong><strong>{currency(total)}.00</strong></div></div>
     <div className={styles.agreements}><label><input type="checkbox" checked={agreements.authentic} onChange={(event) => setAgreements({ ...agreements, authentic: event.target.checked })} required /><span>I confirm that all entered details, department codes, and university enrollment IDs are authentic.</span></label><label><input type="checkbox" checked={agreements.conduct} onChange={(event) => setAgreements({ ...agreements, conduct: event.target.checked })} required /><span>I agree to the IEEE SB GEHU Code of Conduct, tournament anti-cheat protocols, and conflict scheduling guidelines.</span></label></div>
   </div>;
 }
@@ -57,7 +57,10 @@ export function Review({ participant, selectedEvents, total, teamName, members, 
 export function Payment({ total, eventIds, utr, setUtr, screenshot, setScreenshot }: { total: number; eventIds: string[]; utr: string; setUtr: (value: string) => void; screenshot: File | null; setScreenshot: (file: File | null) => void }) {
   const [mode, setMode] = useState("UPI Transfer");
   const [fileError, setFileError] = useState("");
-  const [instructions, setInstructions] = useState<{ amount: number; upiId: string; payeeName: string; qrDataUrl: string } | null>(null);
+  const eventKey = eventIds.join(",");
+  const requestKey = `${eventKey}:${total}`;
+  const [loadedInstructions, setInstructions] = useState<{ requestKey: string; upiId: string; payeeName: string; qrDataUrl: string } | null>(null);
+  const instructions = loadedInstructions?.requestKey === requestKey ? loadedInstructions : null;
   const [gatewayError, setGatewayError] = useState("");
   const [loadingGateway, setLoadingGateway] = useState(true);
 
@@ -65,13 +68,21 @@ export function Payment({ total, eventIds, utr, setUtr, screenshot, setScreensho
     const controller = new AbortController();
     setLoadingGateway(true);
     setGatewayError("");
-    fetch(`/api/payment?events=${encodeURIComponent(eventIds.join(","))}`, { credentials: "same-origin", signal: controller.signal })
+    setInstructions(null);
+    fetch(`/api/payment?events=${encodeURIComponent(eventKey)}`, { credentials: "same-origin", cache: "no-store", signal: controller.signal })
       .then(async (response) => { const body = await response.json().catch(() => ({})); if (!response.ok) throw new Error(body.error || "Payment instructions are unavailable."); return body; })
-      .then((body) => setInstructions(body))
+      .then(async (body) => {
+        if (controller.signal.aborted) return;
+        const upiUrl = new URL(body.upiUrl);
+        upiUrl.searchParams.set("am", total.toFixed(2));
+        const QRCode = (await import("qrcode")).default;
+        const qrDataUrl = await QRCode.toDataURL(upiUrl.toString(), { width: 300, margin: 2, errorCorrectionLevel: "M" });
+        if (!controller.signal.aborted) setInstructions({ requestKey, upiId: body.upiId, payeeName: body.payeeName, qrDataUrl });
+      })
       .catch((error: unknown) => { if (!controller.signal.aborted) setGatewayError(error instanceof Error ? error.message : "Payment instructions are unavailable."); })
       .finally(() => { if (!controller.signal.aborted) setLoadingGateway(false); });
     return () => controller.abort();
-  }, [eventIds]);
+  }, [eventKey, total, requestKey]);
 
   function chooseFile(file?: File) {
     if (!file) return;
@@ -85,7 +96,7 @@ export function Payment({ total, eventIds, utr, setUtr, screenshot, setScreensho
   }
 
   return <div className={styles.paymentGrid}>
-    <div className={`${styles.registryPanel} ${styles.treasuryPanel}`}><p className={styles.stepLabel}>Official Treasury Gateway</p>{instructions ? <img className={styles.paymentQr} src={instructions.qrDataUrl} alt={`UPI payment QR code for ${currency(instructions.amount)}`} /> : <div className={styles.qrIllustration} aria-label="Payment QR code unavailable"><Icon name="qr_code_2" /></div>}<strong className={styles.paymentAmount}>{currency(instructions?.amount ?? total)}.00</strong>{instructions ? <p>Scan via <strong>GPay, PhonePe, Paytm, or BHIM</strong> to:<br /><span className={styles.stepLabel}>{instructions.upiId}</span><br /><small>{instructions.payeeName}</small></p> : <p role="status">{loadingGateway ? "Loading official payment instructions…" : gatewayError}</p>}</div>
+    <div className={`${styles.registryPanel} ${styles.treasuryPanel}`}><p className={styles.stepLabel}>Official Treasury Gateway</p>{instructions ? <img className={styles.paymentQr} src={instructions.qrDataUrl} alt={`UPI payment QR code for ${currency(total)}`} /> : <div className={styles.qrIllustration} aria-label="Payment QR code unavailable"><Icon name="qr_code_2" /></div>}<strong className={styles.paymentAmount}>{currency(total)}.00</strong>{instructions ? <p>Scan via <strong>GPay, PhonePe, Paytm, or BHIM</strong> to:<br /><span className={styles.stepLabel}>{instructions.upiId}</span><br /><small>{instructions.payeeName}</small></p> : <p role="status">{loadingGateway ? "Loading official payment instructions…" : gatewayError}</p>}</div>
     <div className={styles.registryPanel}><p className={styles.stepLabel}>Payment Mode Protocol</p><div className={styles.paymentModes} role="group" aria-label="Payment mode">{["UPI Transfer", "Net Banking", "Desk Slip"].map((item) => <button type="button" key={item} aria-pressed={mode === item} className={mode === item ? styles.activePaymentMode : ""} onClick={() => setMode(item)}>{item}</button>)}</div>
       <div className={styles.field}><label htmlFor="payment-utr">12-Digit Bank Reference / UTR Number *</label><input id="payment-utr" value={utr} onChange={(e) => setUtr(e.target.value)} inputMode="numeric" pattern="[0-9]{12}" placeholder="Enter 12 digits" required /></div>
       <div className={styles.field}><label htmlFor="payment-proof">Payment Proof / Screenshot *</label><label className={styles.uploadZone} htmlFor="payment-proof" onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); chooseFile(e.dataTransfer.files[0]); }}><Icon name="cloud_upload" /><strong>{screenshot?.name || "Drop transaction screenshot or receipt"}</strong><span>PNG, JPG, or WEBP up to 5MB</span><input className="sr-only" id="payment-proof" type="file" accept="image/png,image/jpeg,image/webp" onChange={(e) => chooseFile(e.target.files?.[0])} required /></label>{fileError && <p role="alert" className={styles.fileError}>{fileError}</p>}</div>

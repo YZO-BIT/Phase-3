@@ -32,7 +32,7 @@ function EventCard({ event, onDetails }: { event: FrontendEvent; onDetails: () =
         </dl>
         <div className={styles.eventHosts}><span>Hosts</span><p>{event.hosts.join(" · ")}</p></div>
       </div>
-      <div className={styles.eventCardBottom}><p className={styles.eventCardFee}>{frontendCurrency(event.officialFee)}</p><div><button className={styles.detailsButton} type="button" onClick={onDetails}>Details<span className="sr-only"> for {event.title}</span></button><SelectEventButton className={styles.cardSelect} id={event.id}>Select<span className="sr-only"> {event.title}</span></SelectEventButton></div></div>
+      <div className={styles.eventCardBottom}><p className={styles.eventCardFee}>{frontendCurrency(event.fee)}</p><div><button className={styles.detailsButton} type="button" onClick={onDetails}>Details<span className="sr-only"> for {event.title}</span></button><SelectEventButton className={styles.cardSelect} id={event.id}>Select<span className="sr-only"> {event.title}</span></SelectEventButton></div></div>
     </article>
   );
 }
@@ -68,7 +68,7 @@ export function EventsCatalog() {
         <div className={styles.eventIcon}><Icon name={detail.icon} /></div>
          <p className={styles.eyebrow}>{detail.officialDate} • {detail.officialStage}</p>
          <h2 className={styles.cyberHeading} id="event-dialog-title">{detail.title}</h2><p>{detail.description}</p>
-         <dl className={styles.eventDetails}><div><dt>Starting time</dt><dd>{detail.officialTime}</dd></div><div><dt>Format</dt><dd>{detail.officialMode}</dd></div><div><dt>Venue</dt><dd>{detail.officialVenue}</dd></div><div><dt>Registration fee</dt><dd>{frontendCurrency(detail.officialFee)}</dd></div></dl>
+         <dl className={styles.eventDetails}><div><dt>Starting time</dt><dd>{detail.officialTime}</dd></div><div><dt>Format</dt><dd>{detail.officialMode}</dd></div><div><dt>Venue</dt><dd>{detail.officialVenue}</dd></div><div><dt>Registration fee</dt><dd>{frontendCurrency(detail.fee)}</dd></div></dl>
          <div className={styles.modalHosts}><span>Hosts</span><p>{detail.hosts.join(" · ")}</p></div>
           {detail.officialDay === 1 && <div className={styles.reportingNotice}><Icon name="location_on" /><p><strong>Pre-event reporting:</strong> All participants and teams must report to {preEventReporting} before their respective event.</p></div>}
         <p className={styles.modalNote}>Check the master schedule before choosing your events. Overlapping time slots cannot be registered together.</p>
