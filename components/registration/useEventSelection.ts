@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { events, getConflictingEvent } from "@/lib/events";
-import { frontendEventById } from "@/lib/frontend-events";
+import { frontendEvents } from "@/lib/frontend-events";
 import { SELECT_EVENT } from "@/lib/registration";
 
 export function useEventSelection(initialIds: string[], onQuickSelect?: () => void) {
@@ -35,8 +35,7 @@ export function useEventSelection(initialIds: string[], onQuickSelect?: () => vo
     return () => window.removeEventListener(SELECT_EVENT, handleQuickSelect);
   }, [select, onQuickSelect]);
 
-  const selectedEvents = events.filter((event) => selectedIds.includes(event.id));
+  const selectedEvents = frontendEvents.filter((event) => selectedIds.includes(event.id));
   const total = selectedEvents.reduce((sum, event) => sum + event.fee, 0);
-  const displayTotal = selectedEvents.reduce((sum, event) => sum + (frontendEventById.get(event.id)?.officialFee ?? event.fee), 0);
-  return { selectedIds, selectedEvents, total, displayTotal, conflict, select, dismissConflict: () => setConflict("") };
+  return { selectedIds, selectedEvents, total, conflict, select, dismissConflict: () => setConflict("") };
 }

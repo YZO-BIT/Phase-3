@@ -59,7 +59,7 @@ class SheetsTransport {
 const origin = "http://localhost:3000";
 const payload = (enrollment = "GEHU/2026/CS/TEST001") => ({
   participant: { name: "Test Participant", enrollment, email: "participant@example.test", phone: "+91 98765 43210", college: "Test University", city: "Dehradun", branch: "CSE (Core)", year: "3rd Year" },
-  eventIds: ["cp"], teamName: "", members: [], utr: "123456789012", amount: 150,
+  eventIds: ["cp"], teamName: "", members: [], utr: "123456789012", amount: 100,
   agreements: { authentic: true, conduct: true }, idempotencyKey: "d3c67b5f-ff20-4140-96d6-077133556d4d",
 });
 const cookieFrom = (res: Response) => res.headers.get("set-cookie")!.split(";")[0];
@@ -109,7 +109,7 @@ test("registration persists a real image and exactly ordered PENDING/NOT_READY G
   const row = f.google.rows[1];
   assert.equal(row[2], "Competitive Programming");
   assert.equal(row[3], "17 October 2026");
-  assert.equal(row[28], "150");
+  assert.equal(row[28], "100");
   assert.equal(row[30], "PENDING");
   assert.equal(row[34], "NOT_READY");
   assert.equal(row[35], "");
@@ -268,8 +268,8 @@ test("current Sheet status is checked again on every approved PDF download", asy
 
 test("admin statistics come from actual rows and conflicting or incomplete rosters are rejected", async (t) => {
   const f = await fixture(t);
-  assert.equal((await f.submit({ ...payload(), eventIds: ["cp", "ctf"], amount: 450 })).status, 400);
-  assert.equal((await f.submit({ ...payload(), eventIds: ["bgmi"], amount: 400, teamName: "Test Team" })).status, 400);
+  assert.equal((await f.submit({ ...payload(), eventIds: ["cp", "ctf"], amount: 200 })).status, 400);
+  assert.equal((await f.submit({ ...payload(), eventIds: ["bgmi"], amount: 300, teamName: "Test Team" })).status, 400);
   await f.submit();
   const admin = await f.login();
   const response = await f.app.adminList(new Request(`${origin}/api/admin/registrations`, { headers: { cookie: admin } }));
