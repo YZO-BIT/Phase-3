@@ -114,7 +114,7 @@ export function EditorialRegistration() {
 export function CyberRegistration() {
   const [step, setStep] = useState(1);
   const quickSelect = useCallback(() => setStep(2), []);
-  const selection = useEventSelection(["cp", "chess"], quickSelect);
+  const selection = useEventSelection(["cp"], quickSelect);
   const { participant, update } = useParticipant(emptyParticipant);
   const [teamName, setTeamName] = useState("");
   const [members, setMembers] = useState<TeamMember[]>([]);

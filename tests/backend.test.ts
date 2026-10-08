@@ -109,6 +109,7 @@ test("registration persists a real image and exactly ordered PENDING/NOT_READY G
   const row = f.google.rows[1];
   assert.equal(row[2], "Competitive Programming");
   assert.equal(row[3], "17 October 2026");
+  assert.equal(row[4], "1:00 PM");
   assert.equal(row[28], "100");
   assert.equal(row[30], "PENDING");
   assert.equal(row[34], "NOT_READY");
@@ -275,4 +276,25 @@ test("admin statistics come from actual rows and conflicting or incomplete roste
   const response = await f.app.adminList(new Request(`${origin}/api/admin/registrations`, { headers: { cookie: admin } }));
   assert.equal(response.status, 200);
   assert.deepEqual((await response.json()).statistics, { total: 1, pending: 1, approved: 0, rejected: 0, pdfs: 0 });
+});
+
+test("shared same-slot conflict rejects Royale and Karts in payment and registration, preserving unrelated selections", async (t) => {
+  const f = await fixture(t);
+  for (const eventIds of [["royale", "karts"], ["karts", "royale"]]) {
+    const payment = await f.app.payment(new Request(`${origin}/api/payment?events=${eventIds.join(",")}`));
+    assert.equal(payment.status, 400);
+    assert.match((await payment.json()).error, /non-overlapping events/i);
+    const registration = await f.submit({ ...payload(), eventIds, amount: 160 });
+    assert.equal(registration.status, 400);
+    assert.match((await registration.json()).error, /overlapping time slots/i);
+  }
+  assert.equal(f.google.appends, 0);
+  for (const eventIds of [["cp", "karts"], ["cp", "royale"], ["ff", "karts"]]) {
+    const payment = await f.app.payment(new Request(`${origin}/api/payment?events=${eventIds.join(",")}`));
+    assert.equal(payment.status, 200);
+  }
+  const accepted = await f.submit({ ...payload(), eventIds: ["cp", "karts"], amount: 180 });
+  assert.equal(accepted.status, 201);
+  assert.equal((await accepted.json()).amount, 180);
+  assert.equal(f.google.appends, 1);
 });

@@ -33,6 +33,7 @@
 .checklistItem > div { display: flex; align-items: center; gap: 4px; min-width: 0; }
 .checklistItem input { width: 16px; height: 16px; margin: 0; flex-shrink: 0; accent-color: var(--primary); color-scheme: light; }
 .checklistItem > div > span { font-size: 12px; line-height: 24px; text-transform: uppercase; }
+.checklistItem small { display: block; font-size: 10px; line-height: 14px; color: var(--muted); }
 .checklistItem > span { font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0.04em; color: var(--muted); }
 .editorialTotal { margin-top: 16px; padding-top: 8px; border-top: 1px solid var(--border); }
 .editorialTotal > div { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
@@ -112,8 +113,8 @@
 .selectionCardFooter > span { display: flex; align-items: center; gap: 4px; color: var(--muted); font-size: 11px; }
 .selectionCardFooter :global(.material-icon) { font-size: 16px; }
 .selectionGrid .selectedCard { border-color: var(--primary); box-shadow: 0 0 16px rgb(0 242 254 / 15%); background: rgb(0 242 254 / 5%); }
-.selectionGrid .blockedCard { opacity: 0.52; cursor: not-allowed; border-style: dashed; }
-.selectionGrid .blockedCard input { cursor: not-allowed; }
+.selectionGrid .blockedCard, .eventChecklist .blockedCard { opacity: 0.52; cursor: not-allowed; border-style: dashed; }
+.selectionGrid .blockedCard input, .eventChecklist .blockedCard input { cursor: not-allowed; }
 .selectionSummary { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 24px; padding: 16px; border-radius: 8px; border: 1px solid rgb(0 242 254 / 30%); background: var(--surface); }
 .selectionSummary strong { color: var(--mint); font-family: var(--font-space), sans-serif; font-size: 24px; line-height: 30px; }
 

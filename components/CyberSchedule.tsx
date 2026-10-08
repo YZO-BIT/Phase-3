@@ -16,7 +16,7 @@ function Track({ title, window, items, emptyLabel, finalRound = false, violet = 
 
 const esports = frontendEvents.filter((event) => event.isEsports);
 const majorEsports = frontendEvents.filter((event) => officialFinalists.some((finalist) => finalist.id === event.id));
-const technical = frontendEvents.filter((event) => ["cp", "ctf", "chess", "hunt"].includes(event.id));
+const technical = ["ctf", "chess", "hunt", "cp"].map((id) => frontendEvents.find((event) => event.id === id)!);
 const trivia = frontendEvents.filter((event) => event.id === "trivia");
 
 export function CyberSchedule() {
@@ -24,7 +24,7 @@ export function CyberSchedule() {
   const scheduleCopy = day === 1
     ? "16 October contains both esports qualifying rounds. Turbo Trivia begins at 1:00 PM between the qualifying windows."
     : day === 2
-      ? "17 October covers CP and CTF together at 10:00 AM, followed by Chess at 11:00 AM and Treasure Hunt at 12:00 PM."
+      ? "17 October begins with CTF at 10:00 AM, followed by Chess at 11:00 AM, Treasure Hunt at 12:00 PM, and CP at 1:00 PM."
       : "19 October, 8:00 AM–12:00 PM is the final round for BGMI, Free Fire MAX, and Valorant. Prize distribution follows at 1:00 PM.";
 
   return (
@@ -34,7 +34,7 @@ export function CyberSchedule() {
         <div className={styles.slotWarning}><Icon name="warning" /><p><strong>Official itinerary:</strong> {scheduleCopy}</p></div>
         {day === 1 && <div className={`${styles.reportingNotice} ${styles.scheduleReporting}`}><Icon name="location_on" /><p><strong>Pre-event reporting:</strong> All participants and teams must report to {preEventReporting} before their respective event.</p></div>}
         <div className={styles.cyberTrackGrid}>
-          {day === 1 ? <><Track title={`${openingCeremony.date} • ${openingCeremony.label}`} window={openingCeremony.time} items={[]} emptyLabel={openingCeremony.label} /><Track title="16 October • Esports Qualifying Round 1" window="9:00 AM" items={esports} /><Track title="16 October • Turbo Trivia" window="1:00 PM" items={trivia} violet /><Track title="16 October • Esports Qualifying Round 2" window="2:00 PM" items={majorEsports} violet /></> : day === 2 ? <><Track title="17 October • Technical / Other Competitions" window="10:00 AM–12:00 PM" items={technical} violet /></> : <><Track title="19 October • Esports Final Round" window="8:00 AM – 12:00 PM" items={officialFinalists} finalRound /><Track title={`19 October • ${prizeDistribution.label}`} window={prizeDistribution.time} items={[]} emptyLabel={prizeDistribution.label} violet /></>}
+          {day === 1 ? <><Track title={`${openingCeremony.date} • ${openingCeremony.label}`} window={openingCeremony.time} items={[]} emptyLabel={openingCeremony.label} /><Track title="16 October • Esports Qualifying Round 1" window="9:00 AM" items={esports} /><Track title="16 October • Turbo Trivia" window="1:00 PM" items={trivia} violet /><Track title="16 October • Esports Qualifying Round 2" window="2:00 PM" items={majorEsports} violet /></> : day === 2 ? <><Track title="17 October • Technical / Other Competitions" window="10:00 AM–4:00 PM" items={technical} violet /></> : <><Track title="19 October • Esports Final Round" window="8:00 AM – 12:00 PM" items={officialFinalists} finalRound /><Track title={`19 October • ${prizeDistribution.label}`} window={prizeDistribution.time} items={[]} emptyLabel={prizeDistribution.label} violet /></>}
         </div>
       </div>
     </section>
