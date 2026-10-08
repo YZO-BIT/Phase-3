@@ -1,4 +1,5 @@
 import type { PortalVariant } from "@/lib/events";
+import { competitionDates, competitionDateSummary } from "@/lib/frontend-events";
 import { Icon } from "./Icon";
 import styles from "./Portal.module.css";
 
@@ -7,7 +8,7 @@ const editorialStats = [
   ["Host Venue", "Tech Block & Arenas"], ["Governance", "IEEE Code SEC.04"],
 ];
 const cyberStats = [
-  ["High-Stakes Events", "10"], ["Competition Days", "02"],
+  ["High-Stakes Events", "10"], ["Competition Days", String(competitionDates.length).padStart(2, "0")],
   ["Expected Competitors", "500+"], ["Grand Champion Trophy", "01"],
 ];
 
@@ -18,9 +19,9 @@ export function Hero({ variant }: { variant: PortalVariant }) {
       <div className={styles.heroBadge}><span className={styles.statusDot} />Phase 3 • IEEE SB GEHU • Official Registration Portal</div>
       <h1 id="hero-title" className={styles.cyberHeroTitle}>technIEEEks’26</h1>
       <p className={styles.cyberTagline}>Think • Play • Strategize • Win.</p>
-      <p className={styles.heroDescription}>A two-day technical symposium and esports arena for university innovators, cybersecurity analysts, strategists, and competitive gamers.</p>
+      <p className={styles.heroDescription}>A three-day technical symposium and esports arena for university innovators, cybersecurity analysts, strategists, and competitive gamers.</p>
       <div className={styles.metadataBar}>
-        <div><Icon name="calendar_month" /><span>16 • 17 October 2026</span></div>
+        <div><Icon name="calendar_month" /><span>{competitionDateSummary}</span></div>
         <div><Icon name="pin_drop" /><span>Graphic Era Hill University, Dehradun</span></div>
         <div><Icon name="grid_view" /><span>10 Events • 3 Tracks</span></div>
       </div>
@@ -44,7 +45,7 @@ export function Hero({ variant }: { variant: PortalVariant }) {
         <div className={styles.heroDatum}>
           <div><p className={styles.eyebrow}>Operational Doctrine</p><p className={styles.editorialTagline}>Think • Play • Strategize • Win.</p></div>
           <div className={styles.heroLocation}>
-            <p>16 / 17 October 2026<br />Graphic Era Hill University Campus, Dehradun</p>
+            <p>{competitionDateSummary}<br />Graphic Era Hill University Campus, Dehradun</p>
             <div className={styles.heroActions}>
               <a className={`${styles.button} ${styles.primaryButton}`} href="#register">Register Dossier <Icon name="arrow_forward" /></a>
               <a className={`${styles.button} ${styles.outlineButton}`} href="#events">Explore 10 Events →</a>

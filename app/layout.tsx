@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { competitionDateSummary } from "@/lib/frontend-events";
 import "./globals.css";
 
 const spaceGrotesk = localFont({
@@ -20,7 +21,7 @@ const inter = localFont({
 
 export const metadata: Metadata = {
   title: "technIEEEks’26 — Phase 03 | IEEE SB GEHU",
-  description: "The official technIEEEks’26 Phase 3 festival portal. Explore 10 technical, strategy, and esports competitions at Graphic Era Hill University, Dehradun, on 16 and 17 October 2026.",
+  description: `The official technIEEEks’26 Phase 3 festival portal. Explore 10 technical, strategy, and esports competitions at Graphic Era Hill University, Dehradun, on ${competitionDateSummary}.`,
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

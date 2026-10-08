@@ -12,11 +12,11 @@ export type FrontendEvent = FestivalEvent & {
   isEsports: boolean;
 };
 
-const officialDetails: Record<string, Omit<FrontendEvent, keyof FestivalEvent>> = {
+const officialDetails: Record<string, Omit<FrontendEvent, keyof FestivalEvent> & Partial<Pick<FestivalEvent, "time" | "slot">>> = {
   cp: {
     officialDate: "17 October 2026",
     officialDay: 2,
-    officialTime: "10:00 AM",
+    officialTime: "1:00 PM",
     officialStage: "Technical / Day 2",
     officialVenue: "TCL 302A",
     officialMode: "Individual",
@@ -88,6 +88,8 @@ const officialDetails: Record<string, Omit<FrontendEvent, keyof FestivalEvent>> 
     officialDate: "16 October 2026",
     officialDay: 1,
     officialTime: "9:00 AM · Qualifying Round 1",
+    time: "9:00 AM",
+    slot: "9:00 AM · Qualifying Round 1",
     officialStage: "Esports Qualifying",
     officialVenue: "CR 117",
     officialMode: "Individual",
@@ -98,6 +100,8 @@ const officialDetails: Record<string, Omit<FrontendEvent, keyof FestivalEvent>> 
     officialDate: "16 October 2026",
     officialDay: 1,
     officialTime: "9:00 AM · Qualifying Round 1",
+    time: "9:00 AM",
+    slot: "9:00 AM · Qualifying Round 1",
     officialStage: "Esports Qualifying",
     officialVenue: "CR 116",
     officialMode: "Individual",
@@ -126,8 +130,13 @@ export const frontendEventById = new Map(frontendEvents.map((event) => [event.id
 
 export const frontendEditorialEvents = editorialEvents.map((event) => ({
   ...event,
+  time: frontendEventById.get(event.id)!.time,
+  slot: frontendEventById.get(event.id)!.slot,
   fee: frontendEventById.get(event.id)!.fee,
 }));
+
+export const competitionDates = [16, 17, 19] as const;
+export const competitionDateSummary = "16, 17 and 19 October 2026";
 
 export const openingCeremony = {
   date: "16 October 2026",

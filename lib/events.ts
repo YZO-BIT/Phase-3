@@ -24,7 +24,7 @@ export type FestivalEvent = {
 export const events: FestivalEvent[] = [
   {
     id: "cp", title: "Competitive Programming", icon: "terminal", day: 2, date: 17,
-    start: 600, end: 780, slot: "10:00 AM – 1:00 PM", time: "10:00 AM",
+    start: 780, end: 960, slot: "1:00 PM – 4:00 PM", time: "1:00 PM",
     mode: "Individual", members: 1, fee: 100, venue: "Lab 301, CSE Wing",
     description: "Algorithmic speed contest solving intense data structure & combinatorial puzzles in C++, Java, or Python.",
     editorialDescription: "Algorithm Synthesis • 120 Mins", editorialVenue: "CSE LAB 301",
@@ -74,7 +74,7 @@ export const events: FestivalEvent[] = [
   {
     id: "karts", title: "Smash Karts", icon: "electric_bolt", day: 1, date: 16,
     start: 960, end: 1110, slot: "4:00 PM – 6:30 PM", time: "04:00 PM",
-    mode: "Individual", members: 1, fee: 80, venue: "Lab 204, Tech Block",
+    mode: "Individual", members: 1, fee: 80, venue: "Lab 204, Tech Block", overlap: "D",
     description: "Frantic 3D multiplayer arena combat. Power-ups, rockets, spikes, and elimination point ladders.",
     editorialDescription: "High-Speed Chaos Elimination", editorialVenue: "TECH BLOCK LAB 204",
   },
@@ -101,7 +101,11 @@ export const editorialEvents = [
 export function getConflictingEvent(candidate: FestivalEvent, selectedIds: string[]) {
   return events.find((event) =>
     selectedIds.includes(event.id) && event.id !== candidate.id &&
-    event.date === candidate.date && event.start < candidate.end && candidate.start < event.end,
+    event.date === candidate.date && (
+      // Declared simultaneous tracks share an overlap label even when their legacy windows differ.
+      (candidate.overlap !== undefined && candidate.overlap === event.overlap) ||
+      (event.start < candidate.end && candidate.start < event.end)
+    ),
   );
 }
 

@@ -1,5 +1,5 @@
 import { currency } from "@/lib/events";
-import { frontendEditorialEvents } from "@/lib/frontend-events";
+import { competitionDateSummary, frontendEditorialEvents } from "@/lib/frontend-events";
 import { SelectEventButton } from "./SelectEventButton";
 import styles from "./Portal.module.css";
 
@@ -8,7 +8,7 @@ export function EventsList() {
     <section id="events" className={styles.section} aria-labelledby="events-title">
       <div className={styles.container}>
         <div className={styles.eventsListHeading}>
-          <div><span className={styles.eyebrow}>Sanctioned Brackets • 16–17 Oct 2026</span><h2 id="events-title" className={styles.largeHeading}>Events / 10</h2></div>
+          <div><span className={styles.eyebrow}>Sanctioned Brackets • {competitionDateSummary}</span><h2 id="events-title" className={styles.largeHeading}>Events / 10</h2></div>
           <p>Select bracket slots for registration integration. Slot quotas strictly capped per room capacity.</p>
         </div>
         <div className={styles.eventsList}>{frontendEditorialEvents.map((event, index) => (

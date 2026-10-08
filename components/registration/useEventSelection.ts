@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { events, getConflictingEvent } from "@/lib/events";
-import { frontendEvents } from "@/lib/frontend-events";
+import { frontendEventById, frontendEvents } from "@/lib/frontend-events";
 import { SELECT_EVENT } from "@/lib/registration";
 
 export function useEventSelection(initialIds: string[], onQuickSelect?: () => void) {
@@ -19,7 +19,7 @@ export function useEventSelection(initialIds: string[], onQuickSelect?: () => vo
     }
     const overlap = getConflictingEvent(candidate, selectedIds);
     if (overlap) {
-      setConflict(`${candidate.title} (${candidate.date} Oct, ${candidate.slot}) overlaps with ${overlap.title} (${overlap.slot}). Uncheck the selected event to choose this slot.`);
+      setConflict(`${candidate.title} (${candidate.date} Oct, ${frontendEventById.get(candidate.id)?.slot ?? candidate.slot}) overlaps with ${overlap.title} (${frontendEventById.get(overlap.id)?.slot ?? overlap.slot}). Only one can be selected. Uncheck the selected event to choose this slot.`);
       return;
     }
     setSelectedIds([...selectedIds, id]);
