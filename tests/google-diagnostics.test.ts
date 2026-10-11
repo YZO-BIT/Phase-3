@@ -28,22 +28,37 @@ async function captureFailure(t: TestContext, operation: () => Promise<unknown>)
   return { log: entries[0], serialized: JSON.stringify(entries) };
 }
 
-function headerFixture(header: string[]) {
+function headerFixture(header: string[], columnCount = header.length, options: { expansionFailure?: boolean; rows?: string[][] } = {}) {
   const writes: { range: string; values: string[][] }[] = [];
+  const expansions: { sheetId: number; dimension: string; length: number }[] = [];
+  const operations: string[] = [];
+  let availableColumns = columnCount;
   const transport: typeof fetch = async (input, init) => {
     const url = new URL(String(input));
-    if (url.pathname === "/v4/spreadsheets/test-spreadsheet") return Response.json({ spreadsheetId: google.sheetId, sheets: [{ properties: { title: google.sheetName } }] });
+    if (url.pathname === "/v4/spreadsheets/test-spreadsheet") return Response.json({ spreadsheetId: google.sheetId, sheets: [{ properties: { title: google.sheetName, sheetId: 123, gridProperties: { columnCount: availableColumns } } }] });
+    if (url.pathname.endsWith(":batchUpdate")) {
+      const request = JSON.parse(String(init?.body)).requests?.[0]?.appendDimension;
+      assert.ok(request);
+      expansions.push(request);
+      operations.push("expand");
+      if (options.expansionFailure) return Response.json({ error: { status: "INVALID_ARGUMENT", message: "grid expansion failed" } }, { status: 400 });
+      availableColumns += request.length;
+      return Response.json({ replies: [{}] });
+    }
     const range = decodeURIComponent(url.pathname.split("/values/")[1] || "");
     if (init?.method !== "GET") {
+      operations.push("write");
       writes.push({ range, values: JSON.parse(String(init?.body)).values });
       return Response.json({ updatedRows: 1 });
     }
-    const match = range.match(/!A1:(AJ|AK)(?:1|10001)$/);
+    const match = range.match(/!A1:([A-Z]+)(?:1|10001)$/);
     assert.ok(match, `Unexpected header range: ${range}`);
     // A real Sheets response cannot include cells outside the requested range.
-    return Response.json({ values: [header.slice(0, match[1] === "AJ" ? 36 : 37)] });
+    const width = [...match[1]].reduce((total, character) => total * 26 + character.charCodeAt(0) - 64, 0);
+    if (width > availableColumns) return Response.json({ error: { status: "INVALID_ARGUMENT", message: "range exceeds grid limits" } }, { status: 400 });
+    return Response.json({ values: [header.slice(0, width), ...(options.rows || []).map((row) => row.slice(0, width))] });
   };
-  return { sheets: new GoogleSheetsRepository(google, transport, async () => "test-access-token"), writes };
+  return { sheets: new GoogleSheetsRepository(google, transport, async () => "test-access-token"), writes, expansions, operations };
 }
 
 test("private-key normalization accepts actual newlines, escaped newlines, double-escaped newlines, and quoted values", () => {
@@ -94,11 +109,11 @@ test("Sheets API diagnostics preserve status, reason, message, auth state, and r
   const sheets = new GoogleSheetsRepository(google, transport, async () => "test-access-token");
   const { log, serialized } = await captureFailure(t, () => sheets.ensureHeaders());
   assert.equal(log.upstreamStatus, 403);
-  assert.equal(log.googleSheets.phase, "sheet_read");
+  assert.equal(log.googleSheets.phase, "spreadsheet_metadata");
   assert.equal(log.googleSheets.method, "GET");
   assert.equal(log.googleSheets.spreadsheetId, google.sheetId);
   assert.equal(log.googleSheets.sheetName, google.sheetName);
-   assert.equal(log.googleSheets.range, "'Registrations'!A1:AK1");
+  assert.equal("range" in log.googleSheets, false);
   assert.equal(log.googleSheets.authenticationSucceeded, true);
   assert.equal(log.googleSheets.apiStatus, 403);
   assert.equal(log.googleSheets.apiReason, "forbidden");
@@ -148,8 +163,9 @@ test("upstream messages cannot echo configured application or payment secrets", 
 });
 
 test("current 37-column headers are accepted without rewriting the payment method column", async () => {
-  const { sheets, writes } = headerFixture(SHEET_COLUMNS);
+  const { sheets, writes, expansions } = headerFixture(SHEET_COLUMNS);
   await sheets.ensureHeaders();
+  assert.deepEqual(expansions, []);
   assert.deepEqual(writes, []);
 });
 
@@ -164,12 +180,42 @@ test("invalid payment method headers are rejected without repairing or writing d
 });
 
 test("legacy 36-column headers remain readable and append only the payment method header", async () => {
-  const { sheets, writes } = headerFixture(LEGACY_SHEET_COLUMNS);
+  const legacyRow = ["PG-2026-LEGACY", ...Array(35).fill("")];
+  const { sheets, writes } = headerFixture(LEGACY_SHEET_COLUMNS, 36, { rows: [legacyRow] });
   const result = await sheets.checkAccess();
   assert.equal(result.headerMatches, true);
   assert.deepEqual(writes, []);
+  const rows = await sheets.listRegistrations();
+  assert.equal(rows[0].cells.length, SHEET_COLUMNS.length);
+  assert.equal(rows[0].cells.at(-1), "ONLINE");
   await sheets.ensureHeaders();
   assert.deepEqual(writes, [{ range: "'Registrations'!AK1", values: [["Payment Method"]] }]);
+});
+
+test("a 36-column worksheet expands by exactly one column before writing AK1", async () => {
+  const { sheets, writes, expansions, operations } = headerFixture(LEGACY_SHEET_COLUMNS, 36);
+  await sheets.ensureHeaders();
+  assert.deepEqual(expansions, [{ sheetId: 123, dimension: "COLUMNS", length: 1 }]);
+  assert.deepEqual(operations, ["expand", "write"]);
+  assert.deepEqual(writes, [{ range: "'Registrations'!AK1", values: [["Payment Method"]] }]);
+});
+
+test("a worksheet below the legacy width expands only to the required AK capacity", async () => {
+  const { sheets, expansions, operations } = headerFixture([], 10);
+  await sheets.ensureHeaders();
+  assert.deepEqual(expansions, [{ sheetId: 123, dimension: "COLUMNS", length: 27 }]);
+  assert.deepEqual(operations, ["expand", "write"]);
+});
+
+test("grid expansion failure prevents the header write and reports a safe failure", async (t) => {
+  const { sheets, writes, expansions, operations } = headerFixture(LEGACY_SHEET_COLUMNS, 36, { expansionFailure: true });
+  const { log } = await captureFailure(t, () => sheets.ensureHeaders());
+  assert.deepEqual(expansions, [{ sheetId: 123, dimension: "COLUMNS", length: 1 }]);
+  assert.deepEqual(operations, ["expand"]);
+  assert.deepEqual(writes, []);
+  assert.equal(log.googleSheets.phase, "grid_expansion");
+  assert.equal(log.googleSheets.apiStatus, 400);
+  assert.equal(log.googleSheets.authenticationSucceeded, true);
 });
 
 test("read-only Google access check performs metadata and header reads without creating or repairing data", async (t) => {
@@ -179,7 +225,7 @@ test("read-only Google access check performs metadata and header reads without c
     requests.push({ method: init?.method || "GET", path: url.pathname });
     assert.equal(init?.method, "GET");
     assert.equal(init?.body, undefined);
-    if (url.pathname === "/v4/spreadsheets/test-spreadsheet") return Response.json({ spreadsheetId: google.sheetId, properties: { title: "Phase 3" }, sheets: [{ properties: { title: "Registrations" } }] });
+    if (url.pathname === "/v4/spreadsheets/test-spreadsheet") return Response.json({ spreadsheetId: google.sheetId, properties: { title: "Phase 3" }, sheets: [{ properties: { title: "Registrations", sheetId: 123, gridProperties: { columnCount: 37 } } }] });
     const range = decodeURIComponent(url.pathname.split("/values/")[1] || "");
     if (range.endsWith("A1:AK1")) return Response.json({ values: [SHEET_COLUMNS] });
     if (range.endsWith("A1:AK10001")) return Response.json({ values: [SHEET_COLUMNS] });
@@ -214,9 +260,13 @@ test("read-only access check reports a missing tab without attempting a write", 
 
 test("append and update API failures identify the write phase and range", async (t) => {
   await t.test("append", async (t) => {
-    const transport: typeof fetch = async (_input, init) => init?.method === "POST"
-      ? Response.json({ error: { status: "INVALID_ARGUMENT", message: "Unable to parse range" } }, { status: 400 })
-      : Response.json({ values: [] });
+    const transport: typeof fetch = async (input, init) => {
+      const url = new URL(String(input));
+      if (url.pathname === "/v4/spreadsheets/test-spreadsheet") return Response.json({ spreadsheetId: google.sheetId, sheets: [{ properties: { title: google.sheetName, sheetId: 123, gridProperties: { columnCount: 37 } } }] });
+      return init?.method === "POST"
+        ? Response.json({ error: { status: "INVALID_ARGUMENT", message: "Unable to parse range" } }, { status: 400 })
+        : Response.json({ values: [] });
+    };
     const sheets = new GoogleSheetsRepository(google, transport, async () => "test-access-token");
     const { log } = await captureFailure(t, () => sheets.appendRegistrationToSheet(["PG-2026-1234567890ABCDEF", ...Array(35).fill("")]));
     assert.equal(log.googleSheets.phase, "append");
@@ -247,7 +297,9 @@ test("missing Google configuration logs only presence diagnostics", async (t) =>
 
 test("transport failures preserve ambiguous append behavior while redacting bearer tokens", async () => {
   const token = "test-access-token";
-  const transport: typeof fetch = async (_input, init) => {
+  const transport: typeof fetch = async (input, init) => {
+    const url = new URL(String(input));
+    if (url.pathname === "/v4/spreadsheets/test-spreadsheet") return Response.json({ spreadsheetId: google.sheetId, sheets: [{ properties: { title: google.sheetName, sheetId: 123, gridProperties: { columnCount: 37 } } }] });
     if (init?.method !== "POST") return Response.json({ values: [] });
     throw Object.assign(new TypeError(`fetch failed Bearer ${token}`), { code: "ECONNRESET" });
   };

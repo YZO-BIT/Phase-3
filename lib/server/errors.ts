@@ -2,7 +2,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { ZodError } from "zod";
 
-export type GoogleSheetsPhase = "configuration" | "authentication" | "spreadsheet_metadata" | "sheet_read" | "header_write" | "append" | "update" | "response_validation";
+export type GoogleSheetsPhase = "configuration" | "authentication" | "spreadsheet_metadata" | "sheet_read" | "grid_expansion" | "header_write" | "append" | "update" | "response_validation";
 export type GoogleSheetsDiagnostic = {
   phase: GoogleSheetsPhase;
   method?: string;

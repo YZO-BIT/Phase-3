@@ -182,6 +182,8 @@ sequenceDiagram
     S->>S: derive event set, conflict check, total, deterministic ID
     S->>S: validate magic bytes/format/dimensions/size with sharp
     S->>F: save private proof.png + record.json
+    S->>G: read Registrations sheetId and gridProperties.columnCount
+    S->>G: append only the required columns when AK is outside the grid
     S->>G: ensure current 37-column or compatible legacy header
     S->>G: find existing Registration ID
     S->>G: append one PENDING/NOT_READY row
@@ -386,7 +388,7 @@ The code uses a service-account JWT, not browser OAuth. Before production:
 5. Create the `Registrations` tab in the target Sheet.
 6. Share the Sheet directly with the service-account email as **Editor**. Keep general access **Restricted**; do not publish the Sheet or use “Anyone with the link.”
 7. Put only the non-secret Sheet ID, service-account email, tab name, and secret private key in the hosting provider’s encrypted environment variables.
-8. Run `npm run check:google` from an environment containing the production variables. The command is read-only: it authenticates, reads spreadsheet metadata, and verifies the configured `Registrations` tab and exact header row without writing headers or registration rows. Its JSON output contains only configuration/key booleans, authentication state, and error types/status codes, without identifiers or credential values. Local runs use Next.js's environment loader; `NODE_ENV=production` runs use only injected variables.
+8. Run `npm run check:google` from an environment containing the production variables. The command is read-only: it authenticates, reads spreadsheet metadata and the configured `Registrations` tab, and verifies the current 37-column or compatible legacy header without writing headers or registration rows. Its JSON output contains only configuration/key booleans, authentication state, and error types/status codes, without identifiers or credential values. Local runs use Next.js's environment loader; `NODE_ENV=production` runs use only injected variables.
 
 Google’s official IAM documentation: <https://cloud.google.com/iam/docs/service-accounts-create>. The application’s required authorization scope is visible in `lib/server/googleSheets.ts`.
 
@@ -438,8 +440,8 @@ Payment Method
 
 `GoogleSheetsRepository` implements:
 
-- `ensureHeaders()` — creates the exact header row if the tab is empty, otherwise rejects mismatched headers.
-- `listRegistrations()` — reads `A1:AK10001`, validates current or legacy headers, normalizes row width, and rejects duplicate IDs.
+- `ensureHeaders()` — reads the configured tab’s physical `gridProperties.columnCount`, appends only the missing columns with `spreadsheets.batchUpdate`/`appendDimension`, then creates the exact header row or appends `Payment Method` to a compatible legacy header. It rejects mismatched headers and never writes `AK` before capacity expansion succeeds.
+- `listRegistrations()` — reads the available header width (`A1:AJ10001` for a legacy 36-column tab or `A1:AK10001` for the current schema), validates current or legacy headers, normalizes row width, and rejects duplicate IDs.
 - `findRegistrationRow(id)` — reads column A and rejects duplicate matches.
 - `getRegistrationFromSheet(id)` — finds and reads one complete row.
 - `appendRegistrationToSheet(cells)` — checks the ID, then appends one row with `valueInputOption=RAW` and `INSERT_ROWS`.
@@ -703,7 +705,7 @@ No actual secret values were printed or read into this document.
 ### Step 4 — Create and restrict the Sheet
 
 **Where:** Google Sheets.
-**Enter/do:** create/open the spreadsheet, create the `Registrations` tab, paste the current 37 headers from section 6 (or allow the application to append `Payment Method` in column AK to a compatible legacy 36-column tab), and share the Sheet with the service-account email as Editor. Keep general access Restricted.
+**Enter/do:** create/open the spreadsheet, create the `Registrations` tab, paste the current 37 headers from section 6 (or allow the application to read the worksheet grid, expand it with an end-of-grid `appendDimension` request when needed, and append `Payment Method` in column AK to a compatible legacy 36-column tab), and share the Sheet with the service-account email as Editor. Keep general access Restricted.
 **Expect:** the service account can edit the Sheet, but the public cannot open it.
 **Verify:** open the Sheet’s Share dialog: service account is Editor; General access is Restricted.
 
