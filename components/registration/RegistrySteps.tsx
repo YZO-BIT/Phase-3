@@ -34,7 +34,7 @@ export function TeamFields({ participant, selectedEvents, teamName, setTeamName,
     </div>
     <div className={styles.registryPanel}><p className={styles.stepLabel}>Secondary Roster Members</p>
       {Array.from({ length: memberCount + (alternate ? 1 : 0) }, (_, index) => <div className={styles.memberRow} key={index}>
-        {(["name", "enrollment", "email", "phone"] as const).map((field) => <div key={field}><label className="sr-only" htmlFor={`member-${index}-${field}`}>{index >= memberCount ? "Alternate" : `Member ${index + 2}`} {field}</label><input id={`member-${index}-${field}`} type={field === "phone" ? "tel" : field === "email" ? "email" : "text"} placeholder={`Member ${index + 2} ${field === "name" ? "Full Name" : field === "enrollment" ? "Enrollment ID" : field === "email" ? "Email" : "Mobile"}`} value={members[index]?.[field] ?? ""} onChange={(e) => updateMember(index, field, e.target.value)} required={index < memberCount} /></div>)}
+        {(["name", "enrollment", "email", "phone"] as const).map((field) => <div key={field}><label className="sr-only" htmlFor={`member-${index}-${field}`}>{index >= memberCount ? "Alternate" : `Member ${index + 2}`} {field}</label><input id={`member-${index}-${field}`} type={field === "phone" ? "tel" : field === "email" ? "email" : "text"} placeholder={`Member ${index + 2} ${field === "name" ? "Full Name" : field === "enrollment" ? "Student ID" : field === "email" ? "Email" : "Mobile"}`} value={members[index]?.[field] ?? ""} onChange={(e) => updateMember(index, field, e.target.value)} required={index < memberCount} /></div>)}
       </div>)}
       <button className={styles.textButton} type="button" onClick={() => setAlternate(!alternate)}><Icon name="add_circle" />{alternate ? "Remove Alternate Substitute" : "Add Alternate Substitute (Optional)"}</button>
     </div>
@@ -42,7 +42,7 @@ export function TeamFields({ participant, selectedEvents, teamName, setTeamName,
 }
 
 export function Review({ participant, selectedEvents, total, teamName, members, agreements, setAgreements }: { participant: Participant; selectedEvents: FestivalEvent[]; total: number; teamName: string; members: TeamMember[]; agreements: { authentic: boolean; conduct: boolean }; setAgreements: (agreements: { authentic: boolean; conduct: boolean }) => void }) {
-  const details = [["Full Name", participant.name], ["Enrollment ID", participant.enrollment], ["Email Address", participant.email], ["Phone / WhatsApp", participant.phone], ["College", participant.college], ["City", participant.city]];
+  const details = [["Full Name", participant.name], ["Student ID", participant.enrollment], ["Email Address", participant.email], ["Phone / WhatsApp", participant.phone], ["College", participant.college], ["City", participant.city]];
   const teamEvents = selectedEvents.filter((event) => !(frontendEventById.get(event.id)?.officialMode.startsWith("Individual") ?? event.members === 1));
   return <div className={styles.registryPanel}>
     <p className={styles.stepLabel}>Candidate Record</p><dl className={styles.reviewDetails}>{details.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
