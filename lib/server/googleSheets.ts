@@ -18,12 +18,17 @@ type RangeUpdate = { range: string; values: string[][] };
 type RequestContext = { phase: GoogleSheetsPhase; range?: string; method?: string };
 type ApiErrorDetails = { status?: number; reason?: string; message?: string };
 type RecordValue = Record<string, unknown>;
+type WorksheetMetadata = { sheetId: number; title: string; columnCount: number; spreadsheetId?: string; spreadsheetTitle: string | null };
 
 const responseSchema = z.object({ values: z.array(z.array(z.union([z.string(), z.number(), z.boolean()]))).optional().default([]) });
 const metadataSchema = z.object({
   spreadsheetId: z.string().optional(),
   properties: z.object({ title: z.string().optional() }).optional(),
-  sheets: z.array(z.object({ properties: z.object({ title: z.string().optional(), sheetId: z.number().optional() }).optional() })).optional().default([]),
+  sheets: z.array(z.object({ properties: z.object({
+    title: z.string().optional(),
+    sheetId: z.number().int().nonnegative().optional(),
+    gridProperties: z.object({ columnCount: z.number().int().nonnegative().optional() }).optional(),
+  }).optional() })).optional().default([]),
 });
 
 function record(value: unknown): RecordValue | undefined { return value && typeof value === "object" ? value as RecordValue : undefined; }
@@ -61,6 +66,11 @@ function apiErrorDetails(error: unknown, extraSecret?: string): ApiErrorDetails 
 function parseResponseBody(body: string) {
   try { return JSON.parse(body.slice(0, 8192)) as unknown; } catch { return body.slice(0, 8192); }
 }
+function columnLabel(column: number) {
+  let label = "";
+  for (let value = Math.max(1, column); value > 0; value = Math.floor((value - 1) / 26)) label = String.fromCharCode(65 + ((value - 1) % 26)) + label;
+  return label;
+}
 
 export type GoogleAccessCheck = {
   spreadsheetId: string;
@@ -74,6 +84,7 @@ export type GoogleAccessCheck = {
 export class GoogleSheetsRepository {
   private jwt: JWT;
   private base: string;
+  private capacityExpansion?: Promise<void>;
   constructor(private config: ServerConfig["google"], private transport: typeof fetch = fetch, private tokenOverride?: () => Promise<string>) {
     this.jwt = new JWT({ email: config.email, key: config.privateKey, scopes: ["https://www.googleapis.com/auth/spreadsheets"] });
     this.base = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(config.sheetId)}`;
@@ -187,32 +198,67 @@ export class GoogleSheetsRepository {
     return result.data.values.map((row) => row.map(String));
   }
   private async spreadsheetMetadata() {
-    const result = metadataSchema.safeParse(await this.request("?fields=spreadsheetId,properties(title),sheets(properties(title))", "GET", undefined, { phase: "spreadsheet_metadata" }));
+    const result = metadataSchema.safeParse(await this.request("?fields=spreadsheetId,properties(title),sheets(properties(title,sheetId,gridProperties(columnCount)))", "GET", undefined, { phase: "spreadsheet_metadata" }));
     if (!result.success) throw new GoogleSheetsError(false, undefined, this.diagnostic({ phase: "response_validation" }, { authenticationSucceeded: true, apiReason: "invalid_metadata_response", apiMessage: "Google returned an invalid spreadsheet metadata response." }));
     return result.data;
   }
-  async checkAccess(): Promise<GoogleAccessCheck> {
+  private async configuredWorksheet(): Promise<WorksheetMetadata> {
     const metadata = await this.spreadsheetMetadata();
     const sheet = metadata.sheets.find((item) => item.properties?.title === this.config.sheetName);
     if (!sheet) throw new HttpError(503, "The configured Google Sheets tab was not found. Contact the organizer.", this.diagnostic({ phase: "spreadsheet_metadata" }, { authenticationSucceeded: true, apiReason: "configured_tab_not_found", apiMessage: "The configured tab name was not returned by spreadsheet metadata." }));
-    const headerRange = this.range("A1:AK1");
-    const [current = []] = await this.values("A1:AK1");
+    const properties = sheet.properties;
+    if (!properties || properties.sheetId === undefined || properties.gridProperties?.columnCount === undefined) {
+      throw new HttpError(503, "The configured Google Sheets tab metadata is incomplete. Contact the organizer.", this.diagnostic({ phase: "response_validation" }, { authenticationSucceeded: true, apiReason: "missing_grid_properties", apiMessage: "The configured tab did not return its sheet ID and grid column count." }));
+    }
+    return { sheetId: properties.sheetId, title: properties.title || this.config.sheetName, columnCount: properties.gridProperties.columnCount, spreadsheetId: metadata.spreadsheetId, spreadsheetTitle: metadata.properties?.title || null };
+  }
+  private headerCells(columnCount: number, rows = 1) { return `A1:${columnLabel(columnCount)}${rows}`; }
+  private async registrationCells(rows = 10001) {
+    const worksheet = await this.configuredWorksheet();
+    return this.headerCells(worksheet.columnCount, rows);
+  }
+  private async ensureColumnCapacity(requiredColumnCount: number) {
+    if (this.capacityExpansion) return this.capacityExpansion;
+    const expand = async () => {
+      const worksheet = await this.configuredWorksheet();
+      if (worksheet.columnCount >= requiredColumnCount) return;
+      const length = requiredColumnCount - worksheet.columnCount;
+      await this.request(":batchUpdate", "POST", { requests: [{ appendDimension: { sheetId: worksheet.sheetId, dimension: "COLUMNS", length } }] }, { phase: "grid_expansion", range: `${worksheet.title}!COLUMNS:${worksheet.columnCount}-${requiredColumnCount}` });
+      const updated = await this.configuredWorksheet();
+      if (updated.columnCount < requiredColumnCount) throw new HttpError(503, "The Google Sheets worksheet could not be expanded for the registration schema. Contact the organizer.", this.diagnostic({ phase: "grid_expansion" }, { authenticationSucceeded: true, apiReason: "grid_expansion_not_confirmed", apiMessage: "Google did not report enough worksheet columns after the expansion request." }));
+    };
+    const operation = expand();
+    this.capacityExpansion = operation;
+    try { await operation; } finally { if (this.capacityExpansion === operation) this.capacityExpansion = undefined; }
+  }
+  async checkAccess(): Promise<GoogleAccessCheck> {
+    const worksheet = await this.configuredWorksheet();
+    const headerCells = this.headerCells(worksheet.columnCount);
+    const headerRange = this.range(headerCells);
+    const [current = []] = await this.values(headerCells);
     const headerMatches = this.validHeader(current);
     if (!headerMatches) throw new HttpError(503, "The Registrations tab columns do not match the required schema. Contact the organizer.", this.diagnostic({ phase: "response_validation", range: headerRange }, { authenticationSucceeded: true, apiReason: "header_schema_mismatch", apiMessage: "The first row does not match the current 37-column or compatible legacy schema." }));
-    const rows = await this.listRegistrations("A1:AK10001");
-    return { spreadsheetId: metadata.spreadsheetId || this.config.sheetId, spreadsheetTitle: metadata.properties?.title || null, sheetName: this.config.sheetName, headerMatches, registrationRowCount: rows.length, authenticationSucceeded: true };
+    const rows = await this.listRegistrations(this.headerCells(worksheet.columnCount, 10001));
+    return { spreadsheetId: worksheet.spreadsheetId || this.config.sheetId, spreadsheetTitle: worksheet.spreadsheetTitle, sheetName: this.config.sheetName, headerMatches, registrationRowCount: rows.length, authenticationSucceeded: true };
   }
   async ensureHeaders() {
-    const headerRange = this.range("A1:AK1");
-    const [current = []] = await this.values("A1:AK1");
-    if (!current.length) await this.request(`/values/${encodeURIComponent(this.range("A1:AK1"))}?valueInputOption=RAW`, "PUT", { values: [SHEET_COLUMNS] }, { phase: "header_write", range: this.range("A1:AK1") });
-    else if (this.legacyHeader(current)) await this.request(`/values/${encodeURIComponent(this.range("AK1"))}?valueInputOption=RAW`, "PUT", { values: [[SHEET_COLUMNS.at(-1)]] }, { phase: "header_write", range: this.range("AK1") });
-    else if (!this.currentHeader(current) && !this.legacyHeader(current)) throw new HttpError(503, "The Registrations tab columns do not match the required schema. Contact the organizer.", this.diagnostic({ phase: "response_validation", range: headerRange }, { authenticationSucceeded: true, apiReason: "header_schema_mismatch", apiMessage: "The first row does not match the required registration schema." }));
+    const worksheet = await this.configuredWorksheet();
+    const headerCells = this.headerCells(worksheet.columnCount);
+    const headerRange = this.range(headerCells);
+    const [current = []] = await this.values(headerCells);
+    if (!current.length) {
+      await this.ensureColumnCapacity(SHEET_COLUMNS.length);
+      await this.request(`/values/${encodeURIComponent(this.range("A1:AK1"))}?valueInputOption=RAW`, "PUT", { values: [SHEET_COLUMNS] }, { phase: "header_write", range: this.range("A1:AK1") });
+    } else if (this.legacyHeader(current)) {
+      await this.ensureColumnCapacity(SHEET_COLUMNS.length);
+      await this.request(`/values/${encodeURIComponent(this.range("AK1"))}?valueInputOption=RAW`, "PUT", { values: [[SHEET_COLUMNS.at(-1)]] }, { phase: "header_write", range: this.range("AK1") });
+    } else if (!this.currentHeader(current) && !this.legacyHeader(current)) throw new HttpError(503, "The Registrations tab columns do not match the required schema. Contact the organizer.", this.diagnostic({ phase: "response_validation", range: headerRange }, { authenticationSucceeded: true, apiReason: "header_schema_mismatch", apiMessage: "The first row does not match the required registration schema." }));
   }
-  async listRegistrations(cells = "A1:AK10001"): Promise<SheetRow[]> {
-    const values = await this.values(cells);
+  async listRegistrations(cells?: string): Promise<SheetRow[]> {
+    const readCells = cells || await this.registrationCells();
+    const values = await this.values(readCells);
     if (!values.length) return [];
-    if (!this.validHeader(values[0])) throw new HttpError(503, "The registration sheet columns are invalid. Contact the organizer.", this.diagnostic({ phase: "response_validation", range: this.range(cells) }, { authenticationSucceeded: true, apiReason: "header_schema_mismatch", apiMessage: "The first row does not match the required registration schema." }));
+    if (!this.validHeader(values[0])) throw new HttpError(503, "The registration sheet columns are invalid. Contact the organizer.", this.diagnostic({ phase: "response_validation", range: this.range(readCells) }, { authenticationSucceeded: true, apiReason: "header_schema_mismatch", apiMessage: "The first row does not match the required registration schema." }));
     const rows = values.slice(1).flatMap((row, index) => row[0] ? [{ row: index + 2, cells: this.normalizeRow(row) }] : []);
     if (new Set(rows.map((row) => row.cells[0])).size !== rows.length) throw new HttpError(503, "Duplicate registration identifiers were found in the sheet. Contact the organizer.");
     return rows;
@@ -235,6 +281,7 @@ export class GoogleSheetsRepository {
     if (cells.length !== LEGACY_SHEET_COLUMNS.length && cells.length !== SHEET_COLUMNS.length) throw new Error("Invalid sheet row width");
     if (await this.findRegistrationRow(cells[0])) return false;
     const row = cells.length === LEGACY_SHEET_COLUMNS.length ? [...cells, "ONLINE"] : cells;
+    await this.ensureColumnCapacity(row.length);
     const range = this.range(cells.length === LEGACY_SHEET_COLUMNS.length ? "A:AJ" : "A:AK");
     await this.request(`/values/${encodeURIComponent(range)}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, "POST", { values: [row] }, { phase: "append", range });
     return true;

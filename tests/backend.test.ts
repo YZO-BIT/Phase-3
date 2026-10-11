@@ -12,15 +12,23 @@ import { PDFDocument } from "pdf-lib";
 class SheetsTransport {
   rows: string[][] = [];
   unavailable = false;
+  failExpansion = false;
   failAfterAppend = false;
   appends = 0;
+  columnCount = 36;
   fetch: typeof fetch = async (input, init) => {
     if (this.unavailable) return Response.json({ error: "upstream unavailable" }, { status: 503 });
     const url = new URL(String(input));
     assert.equal(url.origin, "https://sheets.googleapis.com");
     assert.equal(new Headers(init?.headers).get("authorization"), "Bearer test-google-token");
+    if (url.pathname === "/v4/spreadsheets/test-sheet") return Response.json({ spreadsheetId: "test-sheet", sheets: [{ properties: { title: "Registrations", sheetId: 123, gridProperties: { columnCount: this.columnCount } } }] });
     const range = decodeURIComponent(url.pathname.split("/values/")[1] ?? "");
     const body = init?.body ? JSON.parse(String(init.body)) : null;
+    if (url.pathname.endsWith(":batchUpdate") && !url.pathname.endsWith("/values:batchUpdate")) {
+      if (this.failExpansion) return Response.json({ error: { status: "INVALID_ARGUMENT", message: "grid expansion failed" } }, { status: 400 });
+      for (const request of body.requests || []) if (request.appendDimension) this.columnCount += request.appendDimension.length;
+      return Response.json({ replies: [{}] });
+    }
     if (url.pathname.endsWith("/values:batchUpdate")) {
       for (const update of body.data) this.apply(update.range, update.values);
       return Response.json({ totalUpdatedRows: 1 });
@@ -40,9 +48,9 @@ class SheetsTransport {
   read(range: string) {
     const cells = range.split("!")[1] ?? "A1:AK10001";
     if (cells === "A:A") return this.rows.map((row) => [row[0]]);
-    if (cells === "A1:AJ1" || cells === "A1:AK1") return this.rows.length ? [this.rows[0]] : [];
+    if (cells === "A1:AJ1" || cells === "A1:AK1") return this.rows.length ? [this.rows[0].slice(0, cells === "A1:AJ1" ? 36 : 37)] : [];
     const match = cells.match(/^A(\d+):A[JK](\d+)$/);
-    return match ? this.rows.slice(Number(match[1]) - 1, Number(match[2])) : this.rows;
+    return match ? this.rows.slice(Number(match[1]) - 1, Number(match[2])).map((row) => row.slice(0, cells.includes(":AJ") ? 36 : 37)) : this.rows;
   }
   apply(range: string, values: string[][]) {
     const cell = range.split("!")[1].split(":")[0];
@@ -213,6 +221,56 @@ test("admin event counts and filters come from persistent rows without duplicati
   assert.equal(body.registrations[0].eventIds[0], "cp");
 });
 
+test("admin list identifiers open the matching details and payment information", async (t) => {
+  const f = await fixture(t);
+  const created = await f.submit();
+  const createdBody = await created.json();
+  const admin = await f.login();
+  const listed = await f.app.adminList(new Request(`${origin}/api/admin/registrations?status=PENDING`, { headers: { cookie: admin } }));
+  assert.equal(listed.status, 200);
+  const listedBody = await listed.json();
+  assert.equal(listedBody.registrations[0].id, createdBody.id);
+  const details = await f.app.adminDetails(new Request(`${origin}/api/admin/registrations/${encodeURIComponent(listedBody.registrations[0].id)}`, { headers: { cookie: admin } }), f.context(listedBody.registrations[0].id));
+  assert.equal(details.status, 200);
+  const detailBody = await details.json();
+  assert.equal(detailBody.registration.id, createdBody.id);
+  assert.equal(detailBody.participant.name, "Test Participant");
+  assert.equal(detailBody.registration.paymentMethod, "ONLINE");
+  assert.equal(detailBody.utr, "123456789012");
+});
+
+test("a Sheet-listed registration with no private dossier reports dossier loss instead of not found", async (t) => {
+  const f = await fixture(t);
+  const created = await f.submit();
+  const { id } = await created.json();
+  await rm(join(f.root, id), { recursive: true, force: true });
+  const admin = await f.login();
+  const details = await f.app.adminDetails(new Request(`${origin}/api/admin/registrations/${id}`, { headers: { cookie: admin } }), f.context(id));
+  assert.equal(details.status, 503);
+  assert.match((await details.json()).error, /private registration dossier is unavailable/i);
+});
+
+test("a genuinely absent registration remains a safe not-found response", async (t) => {
+  const f = await fixture(t);
+  const admin = await f.login();
+  const id = "PG-2026-0000000000000000";
+  const details = await f.app.adminDetails(new Request(`${origin}/api/admin/registrations/${id}`, { headers: { cookie: admin } }), f.context(id));
+  assert.equal(details.status, 404);
+  assert.equal((await details.json()).error, "Registration not found.");
+});
+
+test("a Google Sheets failure during missing-dossier diagnosis is not reported as not found", async (t) => {
+  const f = await fixture(t);
+  const created = await f.submit();
+  const { id } = await created.json();
+  await rm(join(f.root, id), { recursive: true, force: true });
+  f.google.unavailable = true;
+  const admin = await f.login();
+  const details = await f.app.adminDetails(new Request(`${origin}/api/admin/registrations/${id}`, { headers: { cookie: admin } }), f.context(id));
+  assert.equal(details.status, 503);
+  assert.match((await details.json()).error, /Google Sheets is unavailable/i);
+});
+
 test("custom Other course is stored for admin details", async (t) => {
   const f = await fixture(t);
   const created = await f.submit({ ...payload(), paymentMethod: "OFFLINE", participant: { ...payload().participant, branch: "Other", otherCourse: "Robotics Engineering" } }, null);
@@ -337,6 +395,16 @@ test("Google failures cannot report submission or approval success or authorize 
   assert.equal((await f.decide(id, admin)).status, 503);
   assert.equal((await f.app.pdf(f.request(id, cookieFrom(response)), f.context(id))).status, 503);
   assert.equal(f.google.rows[1][30], "PENDING");
+});
+
+test("worksheet grid expansion failures cannot report registration success or append a row", async (t) => {
+  const f = await fixture(t);
+  f.google.failExpansion = true;
+  const response = await f.submit();
+  assert.equal(response.status, 503);
+  assert.equal(f.google.appends, 0);
+  assert.equal(f.google.rows.length, 0);
+  assert.match((await response.json()).error, /Google Sheets is unavailable/i);
 });
 
 test("ownership, admin authentication, CSRF, and altered admin cookies are enforced", async (t) => {

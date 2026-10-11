@@ -57,12 +57,25 @@ function view(row: SheetRow): RegistrationView {
 
 export class RegistrationService {
   constructor(private sheets: GoogleSheetsRepository, private store: PrivateStore, private config: ServerConfig) {}
-  private async authorizedRecord(id: string, principal: Principal) {
-    const record = await this.store.readRecord(id);
-    if (!record || (principal.role !== "admin" && record.owner !== sha256(principal.sub))) throw new HttpError(404, "Registration not found.");
+  private validateStoredRecord(record: PrivateRecord, id: string, principal: Principal) {
+    if (principal.role !== "admin" && record.owner !== sha256(principal.sub)) throw new HttpError(404, "Registration not found.");
     record.input = registrationSchema.parse(record.input);
     if (record.id !== id) throw new HttpError(503, "The registration record is inconsistent.");
     return record;
+  }
+  private async authorizedRecord(id: string, principal: Principal) {
+    const record = await this.store.readRecord(id);
+    if (!record) throw new HttpError(404, "Registration not found.");
+    return this.validateStoredRecord(record, id, principal);
+  }
+  private async adminRecord(id: string, admin: Principal) {
+    const record = await this.store.readRecord(id);
+    if (!record) {
+      const listed = await this.sheets.getRegistrationFromSheet(id);
+      if (listed) throw new HttpError(503, "Registration is listed in Google Sheets, but its private registration dossier is unavailable. Contact the organizer.");
+      throw new HttpError(404, "Registration not found.");
+    }
+    return this.validateStoredRecord(record, id, admin);
   }
   private async currentRow(record: PrivateRecord) {
     const row = await this.sheets.getRegistrationFromSheet(record.id);
@@ -164,7 +177,7 @@ export class RegistrationService {
     return { registrations, statistics, eventCounts, pagination: { page: currentPage, pageSize, total: filtered.length, totalPages } };
   }
   async adminDetails(id: string, admin: Principal) {
-    const record = await this.authorizedRecord(id, admin);
+    const record = await this.adminRecord(id, admin);
     return { registration: view(await this.currentRow(record)), participant: record.input.participant, members: record.input.members, utr: record.input.utr };
   }
   async decide(id: string, decision: "APPROVE" | "REJECT", remarks: string, admin: Principal) {
