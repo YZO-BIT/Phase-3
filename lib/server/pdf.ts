@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { PDFDocument, rgb } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
-import { events } from "../events";
+import { eventScheduleLabel, events } from "../events";
 import type { PrivateRecord } from "./privateStore";
 
 export async function generateRegistrationPdf(record: PrivateRecord, verifiedBy: string, verifiedAt: string) {
@@ -45,7 +45,7 @@ export async function generateRegistrationPdf(record: PrivateRecord, verifiedBy:
   line("REGISTRATION CONFIRMED", 17, true);
   line(`Registration ID: ${record.id}`);
   line(`Registration Date: ${record.createdAt}`);
-  line("Payment Status: APPROVED · Payment Screenshot: RECEIVED · PDF Status: READY");
+  line(`Payment Method: ${record.input.paymentMethod} · Payment Status: APPROVED · Payment Screenshot: ${record.input.paymentMethod === "ONLINE" ? "RECEIVED" : "NOT REQUIRED"} · PDF Status: READY`);
   line(`Verified By: ${verifiedBy}`);
   line(`Verification Date: ${verifiedAt}`);
   y -= 12;
@@ -54,18 +54,18 @@ export async function generateRegistrationPdf(record: PrivateRecord, verifiedBy:
   line(`Student ID: ${participant.enrollment}`);
   line(`Email: ${participant.email} · Phone: ${participant.phone}`);
   line(`College: ${participant.college} · City: ${participant.city}`);
-  line(`Department: ${participant.branch} · Year: ${participant.year}`);
+  line(`Course / Department: ${participant.branch === "Other" ? participant.otherCourse : participant.branch} · Year: ${participant.year}`);
   if (record.input.teamName) line(`Team: ${record.input.teamName}`);
   for (const [index, member] of record.input.members.entries()) line(`Member ${index + 2}: ${member.name} · ${member.enrollment} · ${member.email} · ${member.phone}`);
   y -= 12;
   line("REGISTERED EVENTS", 14, true);
   for (const event of events.filter((event) => record.input.eventIds.includes(event.id))) {
     line(event.title, 12, true);
-    line(`${event.date} October 2026 · ${event.slot} · ${event.mode}`);
+    line(`${eventScheduleLabel(event)} · ${event.mode}`);
     line(`${event.venue} · INR ${event.fee}`);
   }
   y -= 10;
-  line(`Total Payment: INR ${record.input.amount} · UTR: ${record.input.utr}`, 12, true);
+  line(`Total Payment: INR ${record.input.amount}${record.input.paymentMethod === "ONLINE" ? ` · UTR: ${record.input.utr}` : ""}`, 12, true);
   line("Bring this registration slip and your university ID to the event desk.");
   // Preserve the exact original Unicode record in an attached machine-readable dossier.
   await pdf.attach(Buffer.from(JSON.stringify({ id: record.id, participant, members: record.input.members, eventIds: record.input.eventIds, amount: record.input.amount, verifiedBy, verifiedAt }, null, 2)), "registration-details.json", { mimeType: "application/json", description: "Original registration details" });

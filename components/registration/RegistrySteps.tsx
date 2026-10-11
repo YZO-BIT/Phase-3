@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { currency, type FestivalEvent } from "@/lib/events";
+import { currency, eventScheduleLabel, type FestivalEvent } from "@/lib/events";
 import { frontendEventById } from "@/lib/frontend-events";
-import type { RegistrationView } from "@/lib/registration-data";
+import type { PaymentMethod, RegistrationView } from "@/lib/registration-data";
 import { Icon } from "../Icon";
 import type { Participant } from "./ParticipantFields";
 import styles from "./Registration.module.css";
@@ -54,8 +54,7 @@ export function Review({ participant, selectedEvents, total, teamName, members, 
   </div>;
 }
 
-export function Payment({ total, eventIds, utr, setUtr, screenshot, setScreenshot }: { total: number; eventIds: string[]; utr: string; setUtr: (value: string) => void; screenshot: File | null; setScreenshot: (file: File | null) => void }) {
-  const [mode, setMode] = useState("UPI Transfer");
+export function Payment({ total, eventIds, utr, setUtr, screenshot, setScreenshot, paymentMethod, setPaymentMethod }: { total: number; eventIds: string[]; utr: string; setUtr: (value: string) => void; screenshot: File | null; setScreenshot: (file: File | null) => void; paymentMethod: PaymentMethod; setPaymentMethod: (method: PaymentMethod) => void }) {
   const [fileError, setFileError] = useState("");
   const eventKey = eventIds.join(",");
   const requestKey = `${eventKey}:${total}`;
@@ -66,6 +65,12 @@ export function Payment({ total, eventIds, utr, setUtr, screenshot, setScreensho
 
   useEffect(() => {
     const controller = new AbortController();
+    if (paymentMethod === "OFFLINE") {
+      setLoadingGateway(false);
+      setInstructions(null);
+      setGatewayError("");
+      return () => controller.abort();
+    }
     setLoadingGateway(true);
     setGatewayError("");
     setInstructions(null);
@@ -74,7 +79,7 @@ export function Payment({ total, eventIds, utr, setUtr, screenshot, setScreensho
       .then(async (body) => {
         if (controller.signal.aborted) return;
         const upiUrl = new URL(body.upiUrl);
-        upiUrl.searchParams.set("am", total.toFixed(2));
+         upiUrl.searchParams.set("am", Number(body.amount).toFixed(2));
         const QRCode = (await import("qrcode")).default;
         const qrDataUrl = await QRCode.toDataURL(upiUrl.toString(), { width: 300, margin: 2, errorCorrectionLevel: "M" });
         if (!controller.signal.aborted) setInstructions({ requestKey, upiId: body.upiId, payeeName: body.payeeName, qrDataUrl });
@@ -82,7 +87,16 @@ export function Payment({ total, eventIds, utr, setUtr, screenshot, setScreensho
       .catch((error: unknown) => { if (!controller.signal.aborted) setGatewayError(error instanceof Error ? error.message : "Payment instructions are unavailable."); })
       .finally(() => { if (!controller.signal.aborted) setLoadingGateway(false); });
     return () => controller.abort();
-  }, [eventKey, total, requestKey]);
+  }, [eventKey, paymentMethod, requestKey]);
+
+  function choosePaymentMethod(method: PaymentMethod) {
+    setPaymentMethod(method);
+    setFileError("");
+    if (method === "OFFLINE") {
+      setUtr("");
+      setScreenshot(null);
+    }
+  }
 
   function chooseFile(file?: File) {
     if (!file) return;
@@ -96,18 +110,18 @@ export function Payment({ total, eventIds, utr, setUtr, screenshot, setScreensho
   }
 
   return <div className={styles.paymentGrid}>
-    <div className={`${styles.registryPanel} ${styles.treasuryPanel}`}><p className={styles.stepLabel}>Official Treasury Gateway</p>{instructions ? <img className={styles.paymentQr} src={instructions.qrDataUrl} alt={`UPI payment QR code for ${currency(total)}`} /> : <div className={styles.qrIllustration} aria-label="Payment QR code unavailable"><Icon name="qr_code_2" /></div>}<strong className={styles.paymentAmount}>{currency(total)}.00</strong>{instructions ? <p>Scan via <strong>GPay, PhonePe, Paytm, or BHIM</strong> to:<br /><span className={styles.stepLabel}>{instructions.upiId}</span><br /><small>{instructions.payeeName}</small></p> : <p role="status">{loadingGateway ? "Loading official payment instructions…" : gatewayError}</p>}</div>
-    <div className={styles.registryPanel}><p className={styles.stepLabel}>Payment Mode Protocol</p><div className={styles.paymentModes} role="group" aria-label="Payment mode">{["UPI Transfer", "Net Banking", "Desk Slip"].map((item) => <button type="button" key={item} aria-pressed={mode === item} className={mode === item ? styles.activePaymentMode : ""} onClick={() => setMode(item)}>{item}</button>)}</div>
-      <div className={styles.field}><label htmlFor="payment-utr">12-Digit Bank Reference / UTR Number *</label><input id="payment-utr" value={utr} onChange={(e) => setUtr(e.target.value)} inputMode="numeric" pattern="[0-9]{12}" placeholder="Enter 12 digits" required /></div>
-      <div className={styles.field}><label htmlFor="payment-proof">Payment Proof / Screenshot *</label><label className={styles.uploadZone} htmlFor="payment-proof" onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); chooseFile(e.dataTransfer.files[0]); }}><Icon name="cloud_upload" /><strong>{screenshot?.name || "Drop transaction screenshot or receipt"}</strong><span>PNG, JPG, or WEBP up to 5MB</span><input className="sr-only" id="payment-proof" type="file" accept="image/png,image/jpeg,image/webp" onChange={(e) => chooseFile(e.target.files?.[0])} required /></label>{fileError && <p role="alert" className={styles.fileError}>{fileError}</p>}</div>
-       <div className={styles.previewNote}><Icon name="info" /><p>Your registration will remain <strong>Payment Verification Pending</strong> until an administrator verifies the screenshot. <strong>PDF Not Ready</strong> until approval.</p></div>
-    </div>
-  </div>;
+    {paymentMethod === "ONLINE" ? <div className={`${styles.registryPanel} ${styles.treasuryPanel}`}><p className={styles.stepLabel}>Official Treasury Gateway</p>{instructions ? <img className={styles.paymentQr} src={instructions.qrDataUrl} alt={`UPI payment QR code for ${currency(total)}`} /> : <div className={styles.qrIllustration} aria-label="Payment QR code unavailable"><Icon name="qr_code_2" /></div>}<strong className={styles.paymentAmount}>{currency(total)}.00</strong>{instructions ? <p>Scan via <strong>GPay, PhonePe, Paytm, or BHIM</strong> to:<br /><span className={styles.stepLabel}>{instructions.upiId}</span><br /><small>{instructions.payeeName}</small></p> : <p role="status">{loadingGateway ? "Loading official payment instructions…" : gatewayError}</p>}</div> : <div className={`${styles.registryPanel} ${styles.treasuryPanel}`}><p className={styles.stepLabel}>Offline Payment</p><Icon name="account_balance" /><strong className={styles.paymentAmount}>{currency(total)}.00</strong><p>Pay at the authorized organizer desk. An administrator will verify the offline payment before approval.</p></div>}
+    <div className={styles.registryPanel}><p className={styles.stepLabel}>Payment Method</p><div className={styles.paymentModes} role="group" aria-label="Payment method"><button type="button" aria-pressed={paymentMethod === "ONLINE"} className={paymentMethod === "ONLINE" ? styles.activePaymentMode : ""} onClick={() => choosePaymentMethod("ONLINE")}>Online Payment</button><button type="button" aria-pressed={paymentMethod === "OFFLINE"} className={paymentMethod === "OFFLINE" ? styles.activePaymentMode : ""} onClick={() => choosePaymentMethod("OFFLINE")}>Offline Payment</button></div>
+      {paymentMethod === "ONLINE" && <div className={styles.field}><label htmlFor="payment-utr">12-Digit Bank Reference / UTR Number *</label><input id="payment-utr" value={utr} onChange={(e) => setUtr(e.target.value)} inputMode="numeric" pattern="[0-9]{12}" placeholder="Enter 12 digits" required /></div>}
+      {paymentMethod === "ONLINE" && <div className={styles.field}><label htmlFor="payment-proof">Payment Proof / Screenshot *</label><label className={styles.uploadZone} htmlFor="payment-proof" onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); chooseFile(e.dataTransfer.files[0]); }}><Icon name="cloud_upload" /><strong>{screenshot?.name || "Drop transaction screenshot or receipt"}</strong><span>PNG, JPG, or WEBP up to 5MB</span><input className="sr-only" id="payment-proof" type="file" accept="image/png,image/jpeg,image/webp" onChange={(e) => chooseFile(e.target.files?.[0])} required /></label>{fileError && <p role="alert" className={styles.fileError}>{fileError}</p>}</div>}
+       <div className={styles.previewNote}><Icon name="info" /><p>{paymentMethod === "ONLINE" ? <>Your registration will remain <strong>Payment Verification Pending</strong> until an administrator verifies the screenshot.</> : <>Offline Payment — <strong>Pending Verification</strong>. An administrator must approve it before the registration is confirmed.</>} <strong>PDF Not Ready</strong> until approval.</p></div>
+     </div>
+   </div>;
 }
 
 export function Confirmation({ participant, selectedEvents, registration, onRefresh, onReset }: { participant: Participant; selectedEvents: FestivalEvent[]; registration: RegistrationView; onRefresh: () => Promise<void>; onReset: () => void }) {
-  const calendarDates = [...new Set(selectedEvents.map((event) => event.date))];
-  const calendarUrl = `https://calendar.google.com/calendar/render?${new URLSearchParams({ action: "TEMPLATE", text: "technIEEEks’26 — Phase 3", dates: `202610${calendarDates[0] ?? 16}/202610${(calendarDates.at(-1) ?? 17) + 1}`, details: selectedEvents.map((event) => `${event.title} — ${event.date} Oct, ${event.slot}`).join("\n"), location: "Graphic Era Hill University, Dehradun" })}`;
+   const calendarDates = [...new Set(selectedEvents.flatMap((event) => event.sessions.map((session) => session.date)))].sort((first, second) => first - second);
+   const calendarUrl = `https://calendar.google.com/calendar/render?${new URLSearchParams({ action: "TEMPLATE", text: "technIEEEks’26 — Phase 3", dates: `202610${calendarDates[0] ?? 16}/202610${(calendarDates.at(-1) ?? 16) + 1}`, details: selectedEvents.map((event) => `${event.title} — ${eventScheduleLabel(event)}`).join("\n"), location: "Graphic Era University, Dehradun" })}`;
   const [refreshing, setRefreshing] = useState(false);
   useEffect(() => {
     if (registration.paymentStatus !== "PENDING") return;
@@ -118,11 +132,11 @@ export function Confirmation({ participant, selectedEvents, registration, onRefr
   const approved = registration.paymentStatus === "APPROVED" && registration.pdfStatus === "READY" && Boolean(registration.pdfUrl);
   const pending = registration.paymentStatus === "PENDING";
   const rejected = registration.paymentStatus === "REJECTED";
-  const paymentLabel = approved ? "Registration Confirmed" : rejected ? "Payment verification failed" : "Payment Verification Pending";
+   const paymentLabel = approved ? "Registration Confirmed" : rejected ? "Payment verification failed" : registration.paymentMethod === "OFFLINE" ? "Offline Payment — Pending Verification" : "Payment Verification Pending";
   const pdfLabel = approved ? "Pass Available" : "PDF Not Ready";
   return <div className={styles.confirmation}>
-     <div className={styles.successIcon}><Icon name={approved ? "verified" : rejected ? "error" : "schedule"} /></div><p className={styles.stepLabel}>{paymentLabel}</p><h3>{approved ? "Registration Confirmed" : rejected ? "Payment verification failed" : "Payment Verification Pending"}</h3><p>{approved ? "Your approved pass is available to view or download." : rejected ? registration.remarks || "The payment proof was rejected. Contact the organizer desk for assistance." : "Your payment screenshot is queued for administrator verification. The pass will become available after approval."}</p>
-      <dl className={styles.confirmationSummary}><div><dt>Registration ID:</dt><dd>{registration.id}</dd></div><div><dt>Registered Candidate:</dt><dd>{participant.name} ({participant.enrollment})</dd></div><div><dt>Event Details:</dt><dd>{selectedEvents.map((event) => { const official = frontendEventById.get(event.id); return `${event.title} · ${official?.officialDate ?? `${event.date} Oct`} · ${official?.officialVenue ?? event.venue}`; }).join(" + ")}</dd></div><div><dt>Payment Status:</dt><dd>{paymentLabel}</dd></div><div><dt>Screenshot:</dt><dd>RECEIVED</dd></div><div><dt>Pass Status:</dt><dd>{pdfLabel}</dd></div><div><dt>Official Venue:</dt><dd>GEHU Clement Town Campus, Dehradun</dd></div>{rejected && <div><dt>Remarks:</dt><dd>{registration.remarks || "No remarks provided."}</dd></div>}</dl>
+     <div className={styles.successIcon}><Icon name={approved ? "verified" : rejected ? "error" : "schedule"} /></div><p className={styles.stepLabel}>{paymentLabel}</p><h3>{approved ? "Registration Confirmed" : rejected ? "Payment verification failed" : "Payment Verification Pending"}</h3><p>{approved ? "Your approved pass is available to view or download." : rejected ? registration.remarks || "Payment verification was rejected. Contact the organizer desk for assistance." : registration.paymentMethod === "OFFLINE" ? "Your offline payment is pending administrator verification. No UTR or screenshot is required. The pass will become available after approval." : "Your payment screenshot is queued for administrator verification. The pass will become available after approval."}</p>
+      <dl className={styles.confirmationSummary}><div><dt>Registration ID:</dt><dd>{registration.id}</dd></div><div><dt>Registered Candidate:</dt><dd>{participant.name} ({participant.enrollment})</dd></div><div><dt>Event Details:</dt><dd>{selectedEvents.map((event) => { const official = frontendEventById.get(event.id); return `${event.title} · ${official?.officialDate ?? `${event.date} Oct`} · ${official?.officialVenue ?? event.venue}`; }).join(" + ")}</dd></div><div><dt>Payment Method:</dt><dd>{registration.paymentMethod === "OFFLINE" ? "Offline Payment" : "Online Payment"}</dd></div><div><dt>Payment Status:</dt><dd>{paymentLabel}</dd></div><div><dt>Screenshot:</dt><dd>{registration.paymentMethod === "OFFLINE" ? "NOT REQUIRED" : "RECEIVED"}</dd></div><div><dt>Pass Status:</dt><dd>{pdfLabel}</dd></div><div><dt>Official Venue:</dt><dd>GEHU Clement Town Campus, Dehradun</dd></div>{rejected && <div><dt>Remarks:</dt><dd>{registration.remarks || "No remarks provided."}</dd></div>}</dl>
      {pending && <p className={styles.statusNote} role="status">Payment Verification Pending · PDF Not Ready</p>}
      <div className={styles.confirmationActions}>{approved && <a className={styles.nextButton} href={registration.pdfUrl!}><Icon name="file_download" />Download Registration PDF</a>}{registration.paymentStatus === "PENDING" && <button type="button" className={styles.backButton} onClick={() => void refresh()} disabled={refreshing}><Icon name="refresh" />{refreshing ? "Checking Status…" : "Refresh Status"}</button>}{registration.paymentStatus !== "REJECTED" && <a className={styles.backButton} href={calendarUrl} target="_blank" rel="noopener noreferrer"><Icon name="calendar_add_on" />Add to Calendar</a>}<button type="button" className={styles.textButton} onClick={onReset}>Return to Portal Home</button></div>
   </div>;

@@ -16,6 +16,19 @@
 .filters, .actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
 .filters { margin-block: 24px; }
 .filters > button { padding: 10px 16px; }
+.filterField { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }
+.filterField input, .filterField select { min-width: 150px; padding: 10px 12px; color: var(--text); background: var(--surface); border: 1px solid var(--outline); font: inherit; text-transform: none; letter-spacing: 0; }
+.eventCounts { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin-block: 24px; }
+.eventCounts button { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; padding: 14px; text-align: left; color: var(--text); background: var(--surface); border: 1px solid var(--border); }
+.eventCounts button:hover, .eventCounts .activeEventCount { border-color: var(--primary); background: var(--surface-high); }
+.eventCounts strong { color: var(--primary); font-family: var(--font-space), sans-serif; font-size: 25px; line-height: 30px; }
+.eventCounts span { overflow-wrap: anywhere; font-size: 12px; line-height: 16px; }
+.eventCounts small { color: var(--muted); font-size: 11px; }
+.eventSections { display: flex; flex-direction: column; gap: 28px; }
+.eventSectionHeading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.eventSectionHeading h2 { font-family: var(--font-space), sans-serif; font-size: 20px; line-height: 28px; text-transform: uppercase; }
+.eventSectionHeading span { color: var(--muted); font-size: 12px; }
+.pagination { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 28px; color: var(--muted); font-size: 12px; }
 .registations { display: grid; }
 .registrations { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
 .registrations > article { margin: 0 !important; border-radius: 8px; }
@@ -34,10 +47,12 @@
 .roster span { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
 .review textarea { width: 100%; padding: 12px; color: var(--text); background: var(--surface-lowest); border: 1px solid var(--outline); resize: vertical; margin-bottom: 16px; }
 .review > p { margin-block: 20px; }
+.offlineNotice { padding: 16px; border: 1px solid var(--outline); background: var(--surface-high); color: var(--muted); }
 .notice { color: var(--mint); padding: 16px; margin-top: 24px; border: 1px solid var(--outline); }
 .empty { color: var(--muted); padding-block: 24px; }
 @media (max-width: 1023px) {
   .statistics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .eventCounts { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .reviewGrid { grid-template-columns: 1fr; }
 }
 @media (max-width: 767px) {
@@ -46,6 +61,9 @@
   .heading h1 { font-size: 28px; line-height: 36px; }
   .statistics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   .statistics > div { padding: 16px; }
+  .filterField { width: 100%; align-items: flex-start; flex-direction: column; }
+  .filterField input, .filterField select { width: 100%; }
+  .eventCounts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .registrations { grid-template-columns: 1fr; }
   .details { grid-template-columns: 1fr; }
   .login { margin-top: 24px; }

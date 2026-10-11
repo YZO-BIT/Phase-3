@@ -2,12 +2,40 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { ZodError } from "zod";
 
+export type GoogleSheetsPhase = "configuration" | "authentication" | "spreadsheet_metadata" | "sheet_read" | "header_write" | "append" | "update" | "response_validation";
+export type GoogleSheetsDiagnostic = {
+  phase: GoogleSheetsPhase;
+  method?: string;
+  spreadsheetId?: string;
+  sheetName?: string;
+  range?: string;
+  configuration: {
+    sheetIdConfigured: boolean;
+    serviceAccountEmailConfigured: boolean;
+    privateKeyConfigured: boolean;
+    privateKeyHasBeginMarker: boolean;
+    privateKeyHasEndMarker: boolean;
+    privateKeyHadLiteralNewlines: boolean;
+    privateKeyHadEscapedNewlines: boolean;
+    privateKeyHadSurroundingQuotes: boolean;
+    privateKeyNormalized: boolean;
+    privateKeyParseable: boolean;
+  };
+  authenticationSucceeded: boolean;
+  apiStatus?: number;
+  apiReason?: string;
+  apiMessage?: string;
+  authenticationErrorType?: string;
+  transportErrorType?: string;
+  transportErrorCode?: string | number;
+};
+
 export class HttpError extends Error {
-  constructor(public status: number, message: string) { super(message); this.name = "HttpError"; }
+  constructor(public status: number, message: string, public diagnostic?: GoogleSheetsDiagnostic) { super(message); this.name = "HttpError"; }
 }
 export class GoogleSheetsError extends HttpError {
-  constructor(public ambiguous: boolean, public upstreamStatus?: number) {
-    super(503, "Google Sheets is unavailable. Registration or verification could not be confirmed. Please retry with the same details.");
+  constructor(public ambiguous: boolean, public upstreamStatus?: number, diagnostic?: GoogleSheetsDiagnostic) {
+    super(503, "Google Sheets is unavailable. Registration or verification could not be confirmed. Please retry with the same details.", diagnostic);
     this.name = "GoogleSheetsError";
   }
 }
@@ -20,7 +48,7 @@ export class BaseController {
       const requestId = randomUUID();
       if (error instanceof ZodError) return Response.json({ error: error.issues[0]?.message ?? "Invalid registration data", requestId }, { status: 400, headers: privateHeaders });
       const status = error instanceof HttpError ? error.status : 500;
-      if (status >= 500) console.error(JSON.stringify({ scope, requestId, errorType: error instanceof Error ? error.name : "UnknownError", upstreamStatus: error instanceof GoogleSheetsError ? error.upstreamStatus : undefined }));
+      if (status >= 500) console.error(JSON.stringify({ scope, requestId, errorType: error instanceof Error ? error.name : "UnknownError", upstreamStatus: error instanceof GoogleSheetsError ? error.upstreamStatus : undefined, googleSheets: error instanceof HttpError ? error.diagnostic : undefined }));
       return Response.json({ error: error instanceof HttpError ? error.message : "An internal error occurred. Please retry or contact the organizer.", requestId }, { status, headers: privateHeaders });
     }
   }

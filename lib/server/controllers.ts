@@ -14,6 +14,10 @@ import { RegistrationService } from "./registrationService";
 export type IdContext = { params: Promise<{ id: string }> };
 const loginSchema = z.object({ email: z.email().max(254), password: z.string().min(1).max(256) }).strict();
 const decisionSchema = z.object({ decision: z.enum(["APPROVE", "REJECT"]), remarks: z.string().trim().max(500).default("") }).strict().refine((input) => input.decision !== "REJECT" || input.remarks.length > 0, "Enter a reason for rejection");
+const adminListQuerySchema = z.object({
+  status: z.enum(["ALL", "PENDING", "APPROVED", "REJECTED"]).default("ALL"), eventId: z.string().max(20).optional(), day: z.enum(["16", "17", "19"]).optional(),
+  search: z.string().trim().max(100).default(""), page: z.coerce.number().int().min(1).max(100000).default(1), pageSize: z.coerce.number().int().min(1).max(100).default(25),
+}).strict();
 
 async function bodyBytes(request: Request, maximum: number) {
   const declared = Number(request.headers.get("content-length"));
@@ -56,19 +60,20 @@ export class RegistrationController extends BaseController {
       this.auth.csrf(request);
       this.limiter.check(`submit:${this.ip(request)}`, 20);
       const contentType = request.headers.get("content-type") || "";
-      if (!contentType.startsWith("multipart/form-data;")) throw new HttpError(400, "Payment screenshot required. Submit the registration with an image upload.");
+      if (!contentType.startsWith("multipart/form-data;")) throw new HttpError(400, "Submit the registration as multipart form data.");
       const bytes = await bodyBytes(request, MAX_SCREENSHOT_BYTES + 65536);
       let form: FormData;
       try { form = await new Response(bytes, { headers: { "content-type": contentType } }).formData(); }
       catch { throw new HttpError(400, "Invalid registration upload."); }
       if ([...form.keys()].some((key) => !["data", "screenshot"].includes(key)) || form.getAll("data").length !== 1 || form.getAll("screenshot").length > 1) throw new HttpError(400, "Unexpected or duplicate registration fields.");
-      const screenshot = form.get("screenshot");
-      if (!(screenshot instanceof File) || !screenshot.size) throw new HttpError(400, "Payment screenshot required.");
       const data = form.get("data");
       if (typeof data !== "string" || data.length > 32768) throw new HttpError(400, "Invalid registration data.");
       let input: unknown;
       try { input = JSON.parse(data); } catch { throw new HttpError(400, "Invalid registration data."); }
       const validated = registrationSchema.parse(input);
+      const screenshotEntry = form.get("screenshot");
+      const screenshot = screenshotEntry instanceof File ? screenshotEntry : null;
+      if (validated.paymentMethod === "ONLINE" && (!screenshot || !screenshot.size)) throw new HttpError(400, "Payment screenshot required for Online Payment.");
       const owner = this.auth.owner(request);
       cookie = owner.cookie;
       const result = await this.service.register(validated, screenshot, owner.principal);
@@ -123,7 +128,8 @@ export class RegistrationController extends BaseController {
   adminList = (request: Request) => this.execute("admin.list", async () => {
     const admin = this.auth.requireAdmin(request);
     this.limiter.check(`admin-list:${admin.sub}`, 30);
-    return this.json(await this.service.adminList());
+    const query = adminListQuerySchema.parse(Object.fromEntries(new URL(request.url).searchParams.entries()));
+    return this.json(await this.service.adminList(query));
   });
   adminDetails = (request: Request, context: IdContext) => this.execute("admin.details", async () => {
     const admin = this.auth.requireAdmin(request);

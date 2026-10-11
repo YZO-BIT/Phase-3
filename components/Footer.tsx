@@ -18,13 +18,12 @@ export function Footer({ variant }: { variant: PortalVariant }) {
             <h2>{cyber ? "Quick Navigation" : "Quick Links"}</h2>
             <a href="#events">Events</a><a href="#schedule">Schedule</a><a href="#rules">Rules</a><a href="#register">Register</a>
             {cyber ? <details className={styles.footerFaq}><summary>Frequently Asked Questions</summary><p>Register for multiple events when their time slots do not overlap. A team captain completes the squad registration. For further questions, contact the organizer desk.</p></details> : <a href="#rules">Rulebook PDF</a>}
-          </nav>
-          <div className={styles.footerContact}>
-            <h2>{cyber ? "Organizer & Desk Contact" : "Desk Contact"}</h2>
-            <div>{cyber && <Icon name="badge" />}<div>{cyber && <p className={styles.contactLabel}>Official Support</p>}<a href="mailto:prinskanyal@gmail.com">prinskanyal@gmail.com</a></div></div>
-            <div>{cyber && <Icon name="mail" />}<div>{cyber && <p className={styles.contactLabel}>Operations Email</p>}<a href="mailto:work.yashgudiyal@gmail.com">work.yashgudiyal@gmail.com</a></div></div>
-            <div>{cyber && <Icon name="pin_drop" />}<div>{cyber && <p className={styles.contactLabel}>Venue</p>}<p>GEHU Campus, Clement Town{cyber ? ", " : <br />}Dehradun, Uttarakhand, India</p></div></div>
-          </div>
+           </nav>
+           <div className={styles.footerContact}>
+             <h2>CONTACT</h2>
+             <div><div><a href="mailto:prinskanyal@gmail.com">prinskanyal@gmail.com</a><a href="mailto:work.yashgudiyal@gmail.com">work.yashgudiyal@gmail.com</a></div></div>
+             <div>{cyber && <Icon name="pin_drop" />}<div>{cyber && <p className={styles.contactLabel}>Venue</p>}<p>GEHU Campus, Clement Town{cyber ? ", " : <br />}Dehradun, Uttarakhand, India</p></div></div>
+           </div>
           {!cyber && <div className={styles.footerStatus}><span>Phase 03 Active</span><p>© 2026 IEEE SB GEHU.<br /><span>All Rights Reserved.</span></p></div>}
         </div>
         {cyber && <div className={styles.footerBottom}><p>© 2026 IEEE SB GEHU. All rights reserved. Built for engineering &amp; competitive minds.</p><p>Security Cleared <span>•</span> Node Active: Phase 3</p></div>}

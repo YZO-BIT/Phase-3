@@ -4,25 +4,33 @@ import { events, getConflictingEvent } from "./events";
 const text = (label: string, max: number) => z.string().trim().min(1, `${label} is required`).max(max, `${label} is too long`).refine((value) => !/[\x00-\x1f\x7f]/.test(value), `${label} contains invalid characters`);
 const phone = text("Phone", 24).refine((value) => /^\+?[\d ()-]+$/.test(value) && /^\d{10,15}$/.test(value.replace(/\D/g, "")), "Enter a valid phone number");
 const enrollment = text("Student ID", 60).regex(/^[\p{L}\p{N}\/._-]+$/u, "Enter a valid student ID").transform((value) => value.toUpperCase());
+const otherCourse = z.string().trim().max(100, "Course is too long").refine((value) => !/[\x00-\x1f\x7f]/.test(value), "Course contains invalid characters").default("");
 
 export const participantSchema = z.object({
   name: text("Full name", 100), enrollment, email: z.email("Enter a valid email address").max(254).transform((value) => value.toLowerCase()),
-  phone, college: text("College", 150), city: text("City", 80), branch: text("Department", 100), year: text("Year of study", 80),
-}).strict();
+  phone, college: text("College", 150), city: text("City", 80), branch: text("Department", 100), year: text("Year of study", 80), otherCourse,
+}).strict().superRefine((input, ctx) => {
+  if (input.branch === "Other" && !input.otherCourse) ctx.addIssue({ code: "custom", path: ["otherCourse"], message: "Course is required when Other is selected" });
+  if (input.branch !== "Other" && input.otherCourse) ctx.addIssue({ code: "custom", path: ["otherCourse"], message: "Enter a custom course only when Other is selected" });
+});
 export const teamMemberSchema = z.object({ name: text("Member name", 100), enrollment, email: z.email("Enter each member's email").max(254).transform((value) => value.toLowerCase()), phone }).strict();
+
 export const registrationSchema = z.object({
   participant: participantSchema,
   eventIds: z.array(z.string().max(20)).min(1, "Select at least one event").max(10),
   teamName: z.string().trim().max(100).default(""), members: z.array(teamMemberSchema).max(5).default([]),
-  utr: z.string().trim().regex(/^\d{12}$/, "Enter the 12-digit bank reference / UTR"),
+  utr: z.string().trim().regex(/^(?:\d{12})?$/, "Enter the 12-digit bank reference / UTR").default(""),
   amount: z.number().int().positive(),
+  paymentMethod: z.enum(["ONLINE", "OFFLINE"], { error: "Payment method must be Online Payment or Offline Payment" }).default("ONLINE"),
   agreements: z.object({ authentic: z.literal(true, "Confirm your details are authentic"), conduct: z.literal(true, "Accept the code of conduct") }).strict(),
   idempotencyKey: z.uuid(),
 }).strict().superRefine((input, ctx) => {
+  if (input.paymentMethod === "ONLINE" && !input.utr) ctx.addIssue({ code: "custom", path: ["utr"], message: "Enter the 12-digit bank reference / UTR" });
   const selected = events.filter((event) => input.eventIds.includes(event.id));
   if (selected.length !== input.eventIds.length) ctx.addIssue({ code: "custom", path: ["eventIds"], message: "Unknown or duplicate event selection" });
   for (const event of selected) if (getConflictingEvent(event, input.eventIds)) {
-    ctx.addIssue({ code: "custom", path: ["eventIds"], message: "Selected events have overlapping time slots" }); break;
+    ctx.addIssue({ code: "custom", path: ["eventIds"], message: "Selected events have overlapping time slots" });
+    break;
   }
   if (input.amount !== selected.reduce((sum, event) => sum + event.fee, 0)) ctx.addIssue({ code: "custom", path: ["amount"], message: "Payment amount does not match the selected events" });
   const requiredMembers = Math.max(1, ...selected.map((event) => event.members)) - 1;
@@ -36,10 +44,12 @@ export const registrationSchema = z.object({
 export type Participant = z.infer<typeof participantSchema>;
 export type TeamMember = z.infer<typeof teamMemberSchema>;
 export type RegistrationInput = z.infer<typeof registrationSchema>;
+export type PaymentMethod = "ONLINE" | "OFFLINE";
 export type PaymentStatus = "PENDING" | "APPROVED" | "REJECTED";
 export type PdfStatus = "NOT_READY" | "READY";
 export type RegistrationView = {
   id: string; createdAt: string; participantName: string; email: string; phone: string; college: string; city: string;
+  eventIds: string[]; paymentMethod: PaymentMethod;
   teamName: string; eventNames: string; eventDates: string; eventTimes: string; registrationType: string; teamSize: string;
   amount: number; proofUrl: string; paymentStatus: PaymentStatus; pdfStatus: PdfStatus; pdfUrl: string | null;
   remarks: string; verifiedBy: string; verifiedAt: string;
