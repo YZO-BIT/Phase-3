@@ -49,4 +49,8 @@ npm run build
 npm run check:google
 ```
 
-`npm test` includes the 14 backend security and workflow tests. Live Google Sheets verification requires the configured service account and sheet; without those values the application fails closed and reports that registration persistence is unavailable.
+`npm test` includes the backend security, workflow, and Google diagnostic tests. `npm run check:google` performs a read-only Google authentication, spreadsheet metadata, tab, and header/data access check; it never creates a registration or repairs headers. Its JSON output reports only redacted diagnostics. Live Google Sheets verification requires the configured service account and sheet; without those values the application fails closed and reports that registration persistence is unavailable.
+
+Local `npm run check:google` runs load `.env.local` and other local environment files with Next.js's `@next/env` loader before reading configuration, preserving Next.js precedence (existing shell variables win). With `NODE_ENV=production`, the command uses only injected environment variables and does not read local env files. Output is limited to configuration/key booleans, authentication state, and error types/status codes; identifiers and credential values are omitted.
+
+For Railway, `GOOGLE_PRIVATE_KEY` may contain a PEM key with actual line breaks, literal `\n` escape sequences, or one surrounding pair of single/double quotes. The server normalizes those forms, verifies the PEM without logging key material, and reports only safe booleans such as marker presence and parseability in `npm run check:google` or Google failure logs.

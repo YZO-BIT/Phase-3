@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test, type TestContext } from "node:test";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { randomBytes, scryptSync } from "node:crypto";
@@ -38,10 +38,10 @@ class SheetsTransport {
     return Response.json({ values: this.read(range) });
   };
   read(range: string) {
-    const cells = range.split("!")[1] ?? "A1:AJ10001";
+    const cells = range.split("!")[1] ?? "A1:AK10001";
     if (cells === "A:A") return this.rows.map((row) => [row[0]]);
-    if (cells === "A1:AJ1") return this.rows.length ? [this.rows[0]] : [];
-    const match = cells.match(/^A(\d+):AJ(\d+)$/);
+    if (cells === "A1:AJ1" || cells === "A1:AK1") return this.rows.length ? [this.rows[0]] : [];
+    const match = cells.match(/^A(\d+):A[JK](\d+)$/);
     return match ? this.rows.slice(Number(match[1]) - 1, Number(match[2])) : this.rows;
   }
   apply(range: string, values: string[][]) {
@@ -58,10 +58,14 @@ class SheetsTransport {
 
 const origin = "http://localhost:3000";
 const payload = (enrollment = "GEHU/2026/CS/TEST001") => ({
-  participant: { name: "Test Participant", enrollment, email: "participant@example.test", phone: "+91 98765 43210", college: "Test University", city: "Dehradun", branch: "CSE (Core)", year: "3rd Year" },
-  eventIds: ["cp"], teamName: "", members: [], utr: "123456789012", amount: 100,
+  participant: { name: "Test Participant", enrollment, email: "participant@example.test", phone: "+91 98765 43210", college: "Test University", city: "Dehradun", branch: "CSE (Core)", year: "3rd Year", otherCourse: "" },
+  eventIds: ["cp"], teamName: "", members: [], utr: "123456789012", amount: 100, paymentMethod: "ONLINE",
   agreements: { authentic: true, conduct: true }, idempotencyKey: "d3c67b5f-ff20-4140-96d6-077133556d4d",
 });
+const offlinePayload = () => {
+  const { utr: _utr, ...data } = payload();
+  return { ...data, paymentMethod: "OFFLINE" };
+};
 const cookieFrom = (res: Response) => res.headers.get("set-cookie")!.split(";")[0];
 
 async function fixture(t: TestContext) {
@@ -79,7 +83,7 @@ async function fixture(t: TestContext) {
     payment: { upiId: "test@upi", payeeName: "Test Organizer" },
   }, { sheetFetch: google.fetch, googleToken: async () => "test-google-token" });
   const image = await sharp({ create: { width: 8, height: 8, channels: 3, background: "#6ff6ff" } }).png().toBuffer();
-  async function submit(data = payload(), proof: File | null = new File([image], "payment.png", { type: "image/png" }), cookie = "") {
+  async function submit(data: unknown = payload(), proof: File | null = new File([image], "payment.png", { type: "image/png" }), cookie = "") {
     const form = new FormData();
     form.set("data", JSON.stringify(data));
     if (proof) form.set("screenshot", proof);
@@ -105,15 +109,16 @@ test("registration persists a real image and exactly ordered PENDING/NOT_READY G
   assert.equal(reg.paymentStatus, "PENDING");
   assert.equal(reg.pdfStatus, "NOT_READY");
   assert.equal(reg.pdfUrl, null);
-  assert.equal(f.google.rows[0].length, 36);
+  assert.equal(f.google.rows[0].length, 37);
   const row = f.google.rows[1];
   assert.equal(row[2], "Competitive Programming");
   assert.equal(row[3], "17 October 2026");
-  assert.equal(row[4], "1:00 PM");
+  assert.equal(row[4], "17 October 2026 · 12:00 PM – 4:00 PM");
   assert.equal(row[28], "100");
   assert.equal(row[30], "PENDING");
   assert.equal(row[34], "NOT_READY");
   assert.equal(row[35], "");
+  assert.equal(row[36], "ONLINE");
   assert.match(row[29], /\/api\/registrations\/PG-2026-[A-F0-9]+\/proof$/);
   const admin = await f.login();
   const proof = await f.app.proof(f.request(reg.id, admin), f.context(reg.id));
@@ -127,6 +132,102 @@ test("missing screenshot is rejected by the backend and produces no registration
   const response = await f.submit(payload(), null);
   assert.equal(response.status, 400);
   assert.match((await response.json()).error, /screenshot required/i);
+  assert.equal(f.google.appends, 0);
+});
+
+test("offline payment is accepted without UTR or screenshot and remains pending", async (t) => {
+  const f = await fixture(t);
+  const response = await f.submit(offlinePayload(), null);
+  assert.equal(response.status, 201);
+  const registration = await response.json();
+  assert.equal(registration.paymentMethod, "OFFLINE");
+  assert.equal(registration.paymentStatus, "PENDING");
+  assert.equal(registration.pdfStatus, "NOT_READY");
+  assert.equal(registration.pdfUrl, null);
+  assert.equal(registration.proofUrl, "");
+  assert.equal(f.google.rows[1][30], "PENDING");
+  assert.equal(f.google.rows[1][36], "OFFLINE");
+  const stored = JSON.parse(await readFile(join(f.root, registration.id, "record.json"), "utf8"));
+  assert.equal(stored.input.utr, "");
+  assert.equal(stored.input.paymentMethod, "OFFLINE");
+  assert.equal(stored.verification, undefined);
+  const retry = await f.submit({ ...offlinePayload(), utr: "" }, null, cookieFrom(response));
+  assert.equal(retry.status, 200);
+  assert.equal((await retry.json()).id, registration.id);
+  assert.equal(f.google.appends, 1);
+});
+
+test("online registrations without a valid UTR are rejected even with a valid screenshot", async (t) => {
+  const f = await fixture(t);
+  const { utr: _utr, ...withoutUtr } = payload();
+  for (const data of [withoutUtr, { ...payload(), utr: "" }, { ...payload(), utr: "123" }, { ...payload(), utr: "12345678901a" }]) {
+    const response = await f.submit(data);
+    assert.equal(response.status, 400);
+    assert.match((await response.json()).error, /12-digit bank reference \/ UTR/i);
+  }
+  assert.equal(f.google.appends, 0);
+});
+
+test("offline payment uses the existing authorized approval and rejection lifecycle", async (t) => {
+  const f = await fixture(t);
+  const created = await f.submit(offlinePayload(), null);
+  assert.equal(created.status, 201);
+  const { id } = await created.json();
+  const owner = cookieFrom(created);
+  const admin = await f.login();
+  const details = await f.app.adminDetails(new Request(`${origin}/api/admin/registrations/${id}`, { headers: { cookie: admin } }), f.context(id));
+  assert.equal(details.status, 200);
+  assert.equal((await details.json()).utr, "");
+  assert.equal((await f.app.proof(f.request(id, admin), f.context(id))).status, 404);
+  assert.equal((await f.app.pdf(f.request(id, owner), f.context(id))).status, 403);
+  const approved = await f.decide(id, admin);
+  assert.equal(approved.status, 200);
+  assert.equal((await approved.json()).paymentMethod, "OFFLINE");
+  assert.equal(f.google.rows[1][30], "APPROVED");
+  assert.equal(f.google.rows[1][36], "OFFLINE");
+  assert.equal((await f.app.pdf(f.request(id, owner), f.context(id))).status, 200);
+
+  const rejectedFixture = await fixture(t);
+  const rejectedCreated = await rejectedFixture.submit({ ...offlinePayload(), utr: "" }, null);
+  assert.equal(rejectedCreated.status, 201);
+  const rejectedId = (await rejectedCreated.json()).id;
+  const rejectedAdmin = await rejectedFixture.login();
+  assert.equal((await rejectedFixture.decide(rejectedId, rejectedAdmin, "REJECT", "Desk record could not be matched")).status, 200);
+  assert.equal(rejectedFixture.google.rows[1][30], "REJECTED");
+  assert.equal((await rejectedFixture.app.pdf(rejectedFixture.request(rejectedId, cookieFrom(rejectedCreated)), rejectedFixture.context(rejectedId))).status, 403);
+});
+
+test("admin event counts and filters come from persistent rows without duplicating registrations", async (t) => {
+  const f = await fixture(t);
+  await f.submit({ ...payload(), paymentMethod: "OFFLINE" }, null);
+  await f.submit({ ...payload("GEHU/2026/CS/TEST002"), eventIds: ["trivia"], amount: 80, paymentMethod: "OFFLINE" }, null);
+  const admin = await f.login();
+  const response = await f.app.adminList(new Request(`${origin}/api/admin/registrations?status=PENDING&eventId=cp&day=17&search=Test%20Participant&pageSize=1`, { headers: { cookie: admin } }));
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.statistics.total, 2);
+  assert.equal(body.eventCounts.find((item: { eventId: string }) => item.eventId === "cp").count, 1);
+  assert.equal(body.eventCounts.find((item: { eventId: string }) => item.eventId === "trivia").count, 1);
+  assert.equal(body.pagination.total, 1);
+  assert.equal(body.registrations.length, 1);
+  assert.equal(body.registrations[0].eventIds[0], "cp");
+});
+
+test("custom Other course is stored for admin details", async (t) => {
+  const f = await fixture(t);
+  const created = await f.submit({ ...payload(), paymentMethod: "OFFLINE", participant: { ...payload().participant, branch: "Other", otherCourse: "Robotics Engineering" } }, null);
+  const admin = await f.login();
+  const id = (await created.json()).id;
+  const details = await f.app.adminDetails(new Request(`${origin}/api/admin/registrations/${id}`, { headers: { cookie: admin } }), f.context(id));
+  assert.equal(details.status, 200);
+  assert.equal((await details.json()).participant.otherCourse, "Robotics Engineering");
+});
+
+test("unsupported payment methods are rejected by the registration API", async (t) => {
+  const f = await fixture(t);
+  const response = await f.submit({ ...payload(), paymentMethod: "CASH" }, null);
+  assert.equal(response.status, 400);
+  assert.match((await response.json()).error, /payment method/i);
   assert.equal(f.google.appends, 0);
 });
 
@@ -289,7 +390,7 @@ test("shared same-slot conflict rejects Royale and Karts in payment and registra
     assert.match((await registration.json()).error, /overlapping time slots/i);
   }
   assert.equal(f.google.appends, 0);
-  for (const eventIds of [["cp", "karts"], ["cp", "royale"], ["ff", "karts"]]) {
+  for (const eventIds of [["cp", "karts"], ["cp", "royale"]]) {
     const payment = await f.app.payment(new Request(`${origin}/api/payment?events=${eventIds.join(",")}`));
     assert.equal(payment.status, 200);
   }
@@ -297,4 +398,19 @@ test("shared same-slot conflict rejects Royale and Karts in payment and registra
   assert.equal(accepted.status, 201);
   assert.equal((await accepted.json()).amount, 180);
   assert.equal(f.google.appends, 1);
+});
+
+test("the registration API rejects direct conflicting submissions but permits different dates", async (t) => {
+  const f = await fixture(t);
+  const validDifferentDates = await f.submit({ ...payload(), eventIds: ["trivia", "cp"], amount: 180 });
+  assert.equal(validDifferentDates.status, 201);
+  for (const eventIds of [["cp", "ctf"], ["bgmi", "ff"], ["karts", "royale"]]) {
+    const payment = await f.app.payment(new Request(`${origin}/api/payment?events=${eventIds.join(",")}`));
+    assert.equal(payment.status, 400);
+  }
+  const sameDate = await f.submit({ ...payload("GEHU/2026/CS/TEST002"), eventIds: ["trivia", "bgmi"], amount: 380 });
+  assert.equal(sameDate.status, 400);
+  assert.match((await sameDate.json()).error, /overlapping time slots/i);
+  const finalPair = await f.submit({ ...payload("GEHU/2026/CS/TEST003"), eventIds: ["royale", "karts"], amount: 160 });
+  assert.equal(finalPair.status, 400);
 });

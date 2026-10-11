@@ -3,7 +3,7 @@ import { Icon } from "../Icon";
 import styles from "./Registration.module.css";
 
 export type Participant = {
-  name: string; enrollment: string; email: string; phone: string; college: string; city: string; branch: string; year: string;
+  name: string; enrollment: string; email: string; phone: string; college: string; city: string; branch: string; year: string; otherCourse: string;
 };
 
 const fields = [
@@ -17,7 +17,7 @@ const fields = [
 
 export function ParticipantFields({ variant, value, onChange }: { variant: PortalVariant; value: Participant; onChange: (field: keyof Participant, value: string) => void }) {
   const cyber = variant === "cyber";
-  const branches = cyber ? ["CSE (Core)", "AI & Machine Learning", "Data Science", "Information Tech", "ECE / EE", "Mechanical / Civil", "BCA / MCA"] : ["Computer Science & Engineering", "Information Technology", "Electronics & Comm. Engg", "Artificial Intelligence & Data Science", "Mechanical Engineering", "Other Faculty / Allied Fields"];
+  const branches = cyber ? ["CSE (Core)", "AI & Machine Learning", "Data Science", "Information Tech", "ECE / EE", "Mechanical / Civil", "BCA / MCA", "Other"] : ["Computer Science & Engineering", "Information Technology", "Electronics & Comm. Engg", "Artificial Intelligence & Data Science", "Mechanical Engineering", "Other Faculty / Allied Fields", "Other"];
   const years = cyber ? ["1st Year", "2nd Year", "3rd Year", "4th Year"] : ["1st Year (Class of 2029)", "2nd Year (Class of 2028)", "3rd Year (Class of 2027)", "4th Year (Class of 2026)", "Postgraduate / Research Scholar"];
   return (
     <div className={`${styles.fields} ${cyber ? styles.cyberFields : ""}`}>
@@ -26,7 +26,8 @@ export function ParticipantFields({ variant, value, onChange }: { variant: Porta
         <div className={styles.inputWrap}><input id={`participant-${field.key}`} name={field.key} type={field.type} inputMode={field.key === "phone" ? "numeric" : undefined} placeholder={field.placeholder} autoComplete={field.autocomplete} value={value[field.key]} onChange={(e) => onChange(field.key, e.target.value)} required />{cyber && field.key !== "college" && value[field.key] && <Icon name="check_circle" />}</div>
       </div>)}
       <div className={cyber ? styles.compactFields : styles.displayContents}>
-        <div className={styles.field}><label htmlFor="participant-branch">{cyber ? "Branch / Dept *" : "Academic Department"}</label><select id="participant-branch" name="branch" value={value.branch} onChange={(e) => onChange("branch", e.target.value)} required>{branches.map((branch) => <option key={branch}>{branch}</option>)}</select></div>
+        <div className={styles.field}><label htmlFor="participant-branch">{cyber ? "Branch / Dept *" : "Academic Department"}</label><select id="participant-branch" name="branch" value={value.branch} onChange={(e) => { onChange("branch", e.target.value); if (e.target.value !== "Other") onChange("otherCourse", ""); }} required>{branches.map((branch) => <option key={branch}>{branch}</option>)}</select></div>
+        {value.branch === "Other" && <div className={styles.field}><label htmlFor="participant-other-course">Enter your course</label><input id="participant-other-course" name="otherCourse" type="text" value={value.otherCourse} onChange={(e) => onChange("otherCourse", e.target.value)} maxLength={100} required placeholder="e.g. Robotics Engineering" /></div>}
         <div className={styles.field}><label htmlFor="participant-year">{cyber ? "Year of Study *" : "Year of Enlistment"}</label><select id="participant-year" name="year" value={value.year} onChange={(e) => onChange("year", e.target.value)} required>{years.map((year) => <option key={year}>{year}</option>)}</select></div>
       </div>
     </div>

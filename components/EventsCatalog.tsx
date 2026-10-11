@@ -26,7 +26,7 @@ function EventCard({ event, onDetails }: { event: FrontendEvent; onDetails: () =
         <div className={styles.eventCardTop}><div className={styles.eventIcon}><Icon name={event.icon} /></div><span className={styles.eventDate}>{event.officialDate} • {event.officialStage}</span></div>
         <h3>{event.title}</h3><p className={styles.eventDescription}>{event.description}</p>
         <dl className={styles.eventDetails}>
-          <div><dt>Start:</dt><dd className={styles.eventTime}>{event.officialTime}</dd></div>
+          <div><dt>Schedule:</dt><dd className={styles.eventTime}>{event.officialTime}</dd></div>
           <div><dt>Format:</dt><dd className={event.officialMode.startsWith("Individual") ? styles.individualMode : styles.teamMode}>{event.officialMode}</dd></div>
           <div><dt>Venue:</dt><dd>{event.officialVenue}</dd></div>
         </dl>
@@ -68,9 +68,9 @@ export function EventsCatalog() {
         <div className={styles.eventIcon}><Icon name={detail.icon} /></div>
          <p className={styles.eyebrow}>{detail.officialDate} • {detail.officialStage}</p>
          <h2 className={styles.cyberHeading} id="event-dialog-title">{detail.title}</h2><p>{detail.description}</p>
-         <dl className={styles.eventDetails}><div><dt>Starting time</dt><dd>{detail.officialTime}</dd></div><div><dt>Format</dt><dd>{detail.officialMode}</dd></div><div><dt>Venue</dt><dd>{detail.officialVenue}</dd></div><div><dt>Registration fee</dt><dd>{frontendCurrency(detail.fee)}</dd></div></dl>
+          <dl className={styles.eventDetails}><div><dt>Schedule</dt><dd>{detail.officialTime}</dd></div><div><dt>Format</dt><dd>{detail.officialMode}</dd></div><div><dt>Venue</dt><dd>{detail.officialVenue}</dd></div><div><dt>Registration fee</dt><dd>{frontendCurrency(detail.fee)}</dd></div></dl>
          <div className={styles.modalHosts}><span>Hosts</span><p>{detail.hosts.join(" · ")}</p></div>
-          {detail.officialDay === 1 && <div className={styles.reportingNotice}><Icon name="location_on" /><p><strong>Pre-event reporting:</strong> All participants and teams must report to {preEventReporting} before their respective event.</p></div>}
+           {detail.sessions.some((session) => session.date === 16) && <div className={styles.reportingNotice}><Icon name="location_on" /><p><strong>16 October reporting:</strong> All participants and teams must report to {preEventReporting} before the scheduled event.</p></div>}
         <p className={styles.modalNote}>Check the master schedule before choosing your events. Overlapping time slots cannot be registered together.</p>
         <div onClick={() => dialog.current?.close()}><SelectEventButton className={`${styles.button} ${styles.primaryButton}`} id={detail.id}>Select for Registration <Icon name="arrow_forward" /></SelectEventButton></div>
       </dialog>

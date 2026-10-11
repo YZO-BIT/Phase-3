@@ -22,7 +22,7 @@ const faqItems = [
   ["Refunds", "Review the applicable event policy with the organizer desk before completing payment."],
   ["ID Required", "Keep a university enrollment ID or institutional identity card ready for credential checks."],
   ["Team Changes", "The team captain should complete the roster; contact the desk before requesting a roster correction."],
-  ["Payment Verification", "Upload a clear payment screenshot and enter the UTR. The registration remains pending until review."],
+  ["Payment Verification", "Online Payment requires a 12-digit UTR and a clear screenshot. Offline Payment requires neither. Every registration remains pending until administrator review."],
   ["Support", "Use the desk contact in the footer for registration, schedule, or payment questions."],
 ] as const;
 

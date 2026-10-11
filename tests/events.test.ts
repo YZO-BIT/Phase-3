@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { events, getConflictingEvent } from "../lib/events";
-import { competitionDates, frontendEventById, officialFinalists, openingCeremony, preEventReporting, prizeDistribution } from "../lib/frontend-events";
+import { competitionDates, closingCeremony, frontendEventById, officialFinalists, openingCeremony, preEventReporting } from "../lib/frontend-events";
 
 test("every Phase 3 event has its final date and preserved start time and price", () => {
   const expected: Record<string, [number, number, number]> = {
-    bgmi: [16, 600, 300], ff: [16, 690, 300], karts: [16, 960, 80],
-    val: [16, 570, 500], royale: [16, 660, 80], cp: [17, 780, 100],
-    ctf: [17, 660, 100], chess: [17, 840, 100], hunt: [17, 870, 300], trivia: [17, 900, 80],
+    bgmi: [16, 600, 300], ff: [16, 600, 300], karts: [16, 600, 80],
+    val: [16, 600, 500], royale: [16, 600, 80], cp: [17, 720, 100],
+    ctf: [17, 720, 100], chess: [17, 720, 100], hunt: [17, 720, 300], trivia: [16, 600, 80],
   };
   assert.equal(events.length, 10);
   for (const event of events) {
@@ -16,37 +16,45 @@ test("every Phase 3 event has its final date and preserved start time and price"
   }
 });
 
-test("same-slot Clash Royale and Smash Karts conflict in both directions without changing unrelated game rules", () => {
-  const games = events.filter((event) => event.date === 16);
-  for (const candidate of games) for (const selected of games) {
-    if (candidate.id === selected.id) continue;
-    const sameSlotPair = [candidate.id, selected.id].sort().join(",") === "karts,royale";
-    const existingOverlap = selected.start < candidate.end && candidate.start < selected.end;
-    assert.equal(Boolean(getConflictingEvent(candidate, [selected.id])), sameSlotPair || existingOverlap, `${candidate.id} + ${selected.id}`);
+test("all 16 October qualifying entries conflict with each other, including Royale and Karts", () => {
+  const qualifying = ["bgmi", "ff", "karts", "royale", "val"];
+  for (const candidateId of qualifying) {
+    const candidate = events.find((event) => event.id === candidateId)!;
+    for (const selectedId of qualifying) {
+      if (candidateId !== selectedId) assert.equal(getConflictingEvent(candidate, [selectedId])?.id, selectedId, `${candidateId} + ${selectedId}`);
+    }
   }
 });
 
-test("CP uses the confirmed 1 PM–4 PM slot and existing interval conflict validation", () => {
+test("the 17 October competitions share the authoritative 12 PM–4 PM interval", () => {
   const cp = events.find((event) => event.id === "cp")!;
-  assert.deepEqual([cp.start, cp.end, cp.time, cp.slot], [780, 960, "1:00 PM", "1:00 PM – 4:00 PM"]);
-  assert.equal(frontendEventById.get("cp")!.officialTime, "1:00 PM");
-  assert.equal(getConflictingEvent(cp, ["chess"])?.id, "chess");
-  assert.equal(getConflictingEvent(cp, ["ff", "karts"]), undefined);
+  assert.deepEqual([cp.start, cp.end, cp.time, cp.slot], [720, 960, "12:00 PM", "12:00 PM – 4:00 PM"]);
+  assert.equal(frontendEventById.get("cp")!.officialTime, "12:00 PM–4:00 PM");
+  for (const id of ["ctf", "chess", "hunt"]) assert.equal(getConflictingEvent(cp, [id])?.id, id);
+  assert.equal(getConflictingEvent(cp, ["trivia"]), undefined);
 });
 
-test("three official competition dates preserve ceremony, finalists, reporting venue, and prize time", () => {
+test("three official competition dates preserve ceremonies, finalists, and reporting venue", () => {
   assert.deepEqual(competitionDates, [16, 17, 19]);
-  assert.deepEqual(officialFinalists.map((event) => event.id).sort(), ["bgmi", "ff", "val"]);
+  assert.deepEqual(officialFinalists.map((event) => event.id).sort(), ["bgmi", "ff", "karts", "royale", "val"]);
   assert.equal(openingCeremony.date, "16 October 2026");
-  assert.equal(openingCeremony.time, "8:00 AM");
-  assert.equal(prizeDistribution.date, "19 October 2026");
-  assert.equal(prizeDistribution.time, "1:00 PM");
+  assert.equal(openingCeremony.time, "9:00 AM–10:00 AM");
+  assert.equal(closingCeremony.date, "19 October 2026");
+  assert.equal(closingCeremony.time, "12:00 PM–4:00 PM");
   assert.equal(preEventReporting, "K.P. Nautiyal Auditorium, 5th Floor");
-  assert.equal(frontendEventById.get("karts")!.officialTime, frontendEventById.get("royale")!.officialTime);
+  assert.equal(frontendEventById.get("trivia")!.officialTime, "10:00 AM–11:30 AM");
 });
 
-test("conflict protection follows the corrected dates", () => {
-  assert.equal(getConflictingEvent(events.find((e) => e.id === "val")!, ["bgmi"])?.id, "bgmi");
-  assert.equal(getConflictingEvent(events.find((e) => e.id === "ctf")!, ["cp"])?.id, "cp");
-  assert.equal(getConflictingEvent(events.find((e) => e.id === "bgmi")!, ["cp"]), undefined);
+test("Turbo Trivia conflicts with the 16 October qualifier but not a different-date competition", () => {
+  const trivia = events.find((event) => event.id === "trivia")!;
+  assert.equal(getConflictingEvent(trivia, ["bgmi"])?.id, "bgmi");
+  assert.equal(getConflictingEvent(trivia, ["cp"]), undefined);
+});
+
+test("all five 19 October Final Round entries share one overlapping session", () => {
+  for (const candidate of officialFinalists) {
+    const other = officialFinalists.find((event) => event.id !== candidate.id)!;
+    assert.equal(getConflictingEvent(candidate, [other.id])?.id, other.id);
+    assert.ok(candidate.sessions.some((session) => session.date === 19 && session.start === 540 && session.end === 690));
+  }
 });

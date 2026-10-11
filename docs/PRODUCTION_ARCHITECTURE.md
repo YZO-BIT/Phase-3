@@ -17,7 +17,7 @@ The current workflow is:
 
 1. The participant chooses non-overlapping events and enters participant/team data.
 2. The server generates the official UPI payment instructions from server-side environment variables.
-3. The participant pays externally, enters a 12-digit UTR/reference, and uploads a PNG/JPEG/WEBP screenshot.
+3. The participant chooses Online Payment or Offline Payment. Online Payment requires a 12-digit UTR/reference and PNG/JPEG/WEBP screenshot; Offline Payment requires neither.
 4. The server validates the request and image, stores a private payment dossier, and appends one `PENDING` row to Google Sheets.
 5. An authenticated administrator opens the dashboard, views the private screenshot and registration details, then approves or rejects the payment manually.
 6. Approval generates a PDF, changes the existing Sheet row to `APPROVED`/`READY`, and stores the protected PDF link. Rejection changes the same row to `REJECTED`/`NOT_READY` and leaves PDF access disabled.
@@ -129,7 +129,7 @@ public/assets/
 | Production start | `npm run start` | `next start` |
 | Typecheck | `npm run typecheck` | `tsc --noEmit` |
 | Tests | `npm test` | Node test runner with `tsx`, all `tests/*.test.ts` |
-| Google check | `npm run check:google` | Validates configured Sheet headers/read access |
+| Google check | `npm run check:google` | Read-only authentication, spreadsheet metadata, tab, and header/data access check; emits redacted JSON diagnostics |
 | Admin password | `npm run admin:password -- '<password>'` | Generates an `scrypt:<salt>:<hash>` value; never commit the output |
 
 `next.config.ts` marks server-heavy packages as external, includes the PDF font in the admin decision route trace, and sets security headers. The production CSP omits `unsafe-eval`; development adds `unsafe-eval` and `ws:` for Next.js tooling only.
@@ -182,7 +182,7 @@ sequenceDiagram
     S->>S: derive event set, conflict check, total, deterministic ID
     S->>S: validate magic bytes/format/dimensions/size with sharp
     S->>F: save private proof.png + record.json
-    S->>G: ensure exact 36-column header
+    S->>G: ensure current 37-column or compatible legacy header
     S->>G: find existing Registration ID
     S->>G: append one PENDING/NOT_READY row
     S->>G: read row again and verify stored cells
@@ -191,7 +191,7 @@ sequenceDiagram
     API-->>B: real ID, PENDING, NOT_READY, no PDF link
 ```
 
-The participant-provided `amount`, event IDs, roster shape, UTR, and statuses are not trusted as approval authority. The server validates event IDs and derives the authoritative total from `lib/events.ts`. The server never accepts client-provided `paymentStatus` or `pdfStatus` fields in the registration schema.
+The participant-provided `amount`, event IDs, roster shape, payment method, UTR, and statuses are not trusted as approval authority. The server validates event IDs and derives the authoritative total from `lib/events.ts`. Online UTR validation is conditional on the selected method; the server never accepts client-provided `paymentStatus` or `pdfStatus` fields in the registration schema.
 
 ### 4.2 Payment instructions and manual verification
 
@@ -202,14 +202,14 @@ flowchart LR
     PI --> QR[UPI URI + QR data URL]
     QR --> B
     B --> PAY[External UPI payment]
-    B -->|UTR + screenshot| REG[POST registration]
+    B -->|Online: UTR + screenshot; Offline: neither| REG[POST registration]
     REG --> PENDING[PENDING]
     PENDING --> ADMIN[Admin checks actual bank/payment record]
     ADMIN -->|Approve| APPROVED[APPROVED + READY + PDF]
     ADMIN -->|Reject + remarks| REJECTED[REJECTED + NOT_READY]
 ```
 
-**Automatic verification:** none. There is no Razorpay/Stripe/bank API/webhook. The UPI QR is an instruction generator only. The UTR is evidence supplied by the participant and is not independently verified by the application.
+**Automatic verification:** none. There is no Razorpay/Stripe/bank API/webhook. The UPI QR is an instruction generator only. An Online UTR is evidence supplied by the participant and is not independently verified by the application; Offline Payment is never treated as approved automatically.
 
 ### 4.3 Admin approval/rejection
 
@@ -274,7 +274,7 @@ Participants receive a signed `pg_participant` HttpOnly cookie. It is an ownersh
 ```mermaid
 flowchart TD
     R[RegistrationService] --> H[ensureHeaders]
-    H -->|GET A1:AJ1| HEAD[Validate exact 36-column header]
+    H -->|GET header range| HEAD[Validate current or compatible legacy header]
     R --> F[findRegistrationRow]
     F -->|GET A:A| ID[Registration ID lookup]
     R --> APP[appendRegistrationToSheet]
@@ -386,13 +386,13 @@ The code uses a service-account JWT, not browser OAuth. Before production:
 5. Create the `Registrations` tab in the target Sheet.
 6. Share the Sheet directly with the service-account email as **Editor**. Keep general access **Restricted**; do not publish the Sheet or use “Anyone with the link.”
 7. Put only the non-secret Sheet ID, service-account email, tab name, and secret private key in the hosting provider’s encrypted environment variables.
-8. Run `npm run check:google` from an environment containing the production variables. Expected output is a row count and the `Registrations` tab name.
+8. Run `npm run check:google` from an environment containing the production variables. The command is read-only: it authenticates, reads spreadsheet metadata, and verifies the configured `Registrations` tab and exact header row without writing headers or registration rows. Its JSON output contains only configuration/key booleans, authentication state, and error types/status codes, without identifiers or credential values. Local runs use Next.js's environment loader; `NODE_ENV=production` runs use only injected variables.
 
 Google’s official IAM documentation: <https://cloud.google.com/iam/docs/service-accounts-create>. The application’s required authorization scope is visible in `lib/server/googleSheets.ts`.
 
 ### Exact column order
 
-The first row must contain exactly these 36 columns, in order:
+The current row schema contains these 37 columns, in order. Existing 36-column tabs remain readable; the application appends `Payment Method` in column AK without rewriting existing registration data:
 
 ```text
 Registration ID
@@ -431,6 +431,7 @@ Verified By
 Verification Date
 PDF Status
 PDF Link
+Payment Method
 ```
 
 ### Reads, writes, and integrity behavior
@@ -438,7 +439,7 @@ PDF Link
 `GoogleSheetsRepository` implements:
 
 - `ensureHeaders()` — creates the exact header row if the tab is empty, otherwise rejects mismatched headers.
-- `listRegistrations()` — reads `A1:AJ10001`, validates headers, normalizes row width, and rejects duplicate IDs.
+- `listRegistrations()` — reads `A1:AK10001`, validates current or legacy headers, normalizes row width, and rejects duplicate IDs.
 - `findRegistrationRow(id)` — reads column A and rejects duplicate matches.
 - `getRegistrationFromSheet(id)` — finds and reads one complete row.
 - `appendRegistrationToSheet(cells)` — checks the ID, then appends one row with `valueInputOption=RAW` and `INSERT_ROWS`.
@@ -462,10 +463,10 @@ The registration service reads the Sheet row back after append and after a decis
 - It reads `PAYMENT_UPI_ID` and `PAYMENT_PAYEE_NAME` only on the server.
 - It returns a UPI URI and QR data URL generated by `qrcode`.
 - The participant pays outside the application.
-- The participant enters a 12-digit UTR/reference and uploads a screenshot.
+- The participant enters a 12-digit UTR/reference and uploads a screenshot for Online Payment. Offline Payment submits without either field.
 - The server normalizes the screenshot and stores it privately.
 - Registration starts `PENDING`/`NOT_READY`.
-- An admin manually compares the proof, UTR, amount, recipient, and real bank/payment record.
+- An admin manually verifies the selected payment method, amount, and real bank/payment record. Online Payment includes proof and UTR comparison; Offline Payment has no screenshot or UTR to compare.
 
 ### What does not exist
 
@@ -473,7 +474,7 @@ The registration service reads the Sheet row back after append and after a decis
 - No automatic transaction lookup.
 - No payment webhook.
 - No automatic approval.
-- No claim that entering a UTR proves payment.
+- No claim that entering a UTR proves payment; Offline Payment is never treated as approved automatically.
 
 That matches the required manual business flow. The application’s UPI details are instructions, not authoritative payment verification.
 
@@ -546,9 +547,9 @@ State-changing endpoints require the request `Origin` to equal the configured `A
 - Secrets are read from environment variables, not source code.
 - `.env.example` contains placeholders only.
 - `.gitignore` now ignores `.env*` while allowing `.env.example`; no local secret file should be committed.
-- Server-side Zod validation covers participant data, roster, event IDs, conflicts, amount, UTR, agreements, admin login, and decisions.
+- Server-side Zod validation covers participant data, roster, event IDs, conflicts, amount, conditional UTR, payment method, agreements, admin login, and decisions.
 - Server derives event fees and conflict checks from `lib/events.ts`.
-- Payment screenshot is mandatory at the controller and service layers.
+- Payment screenshot is mandatory at the controller and service layers only for Online Payment.
 - Image type, extension, actual decoded format, dimensions, pages, size, and hash are validated.
 - Private paths are outside `public/`, and IDs are allow-listed.
 - Google credentials never reach the browser.
@@ -702,7 +703,7 @@ No actual secret values were printed or read into this document.
 ### Step 4 — Create and restrict the Sheet
 
 **Where:** Google Sheets.
-**Enter/do:** create/open the spreadsheet, create the `Registrations` tab, paste the exact 36 headers from section 6, and share the Sheet with the service-account email as Editor. Keep general access Restricted.
+**Enter/do:** create/open the spreadsheet, create the `Registrations` tab, paste the current 37 headers from section 6 (or allow the application to append `Payment Method` in column AK to a compatible legacy 36-column tab), and share the Sheet with the service-account email as Editor. Keep general access Restricted.
 **Expect:** the service account can edit the Sheet, but the public cannot open it.
 **Verify:** open the Sheet’s Share dialog: service account is Editor; General access is Restricted.
 
@@ -864,9 +865,9 @@ No actual secret values were printed or read into this document.
 ### 🟢 READY — verified in the current repository
 
 1. Both preserved public UI variants and official logos exist.
-2. Final event dates are encoded as 16/17 October with regression tests.
+2. Final event dates and session intervals are encoded for 16, 17, and 19 October with regression tests.
 3. Server-side registration validation and server-derived event totals exist.
-4. Mandatory proof and image validation exist.
+4. Online proof and image validation exist; Offline Payment is persisted as PENDING without a screenshot.
 5. Private proof/PDF route authorization exists.
 6. Manual admin approval/rejection and same-row Sheet updates exist.
 7. Pending/rejected PDF denial and approved PDF generation exist.
