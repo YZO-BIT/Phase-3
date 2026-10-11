@@ -8,7 +8,7 @@ export type Participant = {
 
 const fields = [
   { key: "name", editorial: "Full Legal Name", cyber: "Full Name *", type: "text", placeholder: "e.g. Aarav Sharma", autocomplete: "name" },
-  { key: "enrollment", editorial: "University Roll / Enrollment No", cyber: "Enrollment Number / Student ID *", type: "text", placeholder: "e.g. GEHU/2023/8492", autocomplete: "off" },
+  { key: "enrollment", editorial: "Student ID", cyber: "Student ID *", type: "text", placeholder: "e.g. 24011205", autocomplete: "off" },
   { key: "email", editorial: "Institutional / Preferred Email", cyber: "Institutional Email Address *", type: "email", placeholder: "name@gehu.ac.in", autocomplete: "email" },
   { key: "phone", editorial: "WhatsApp Mobile Handset", cyber: "WhatsApp / Mobile Number *", type: "tel", placeholder: "+91 98765 43210", autocomplete: "tel" },
   { key: "college", editorial: "College / Academic Institution", cyber: "College / University *", type: "text", placeholder: "Graphic Era Hill University, Dehradun", autocomplete: "organization" },

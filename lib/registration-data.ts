@@ -3,7 +3,7 @@ import { events, getConflictingEvent } from "./events";
 
 const text = (label: string, max: number) => z.string().trim().min(1, `${label} is required`).max(max, `${label} is too long`).refine((value) => !/[\x00-\x1f\x7f]/.test(value), `${label} contains invalid characters`);
 const phone = text("Phone", 24).refine((value) => /^\+?[\d ()-]+$/.test(value) && /^\d{10,15}$/.test(value.replace(/\D/g, "")), "Enter a valid phone number");
-const enrollment = text("Enrollment number", 60).regex(/^[\p{L}\p{N}\/._-]+$/u, "Enter a valid enrollment number").transform((value) => value.toUpperCase());
+const enrollment = text("Student ID", 60).regex(/^[\p{L}\p{N}\/._-]+$/u, "Enter a valid student ID").transform((value) => value.toUpperCase());
 
 export const participantSchema = z.object({
   name: text("Full name", 100), enrollment, email: z.email("Enter a valid email address").max(254).transform((value) => value.toLowerCase()),

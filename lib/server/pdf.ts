@@ -51,7 +51,7 @@ export async function generateRegistrationPdf(record: PrivateRecord, verifiedBy:
   y -= 12;
   const participant = record.input.participant;
   line(`Participant / Captain: ${participant.name}`);
-  line(`Enrollment: ${participant.enrollment}`);
+  line(`Student ID: ${participant.enrollment}`);
   line(`Email: ${participant.email} · Phone: ${participant.phone}`);
   line(`College: ${participant.college} · City: ${participant.city}`);
   line(`Department: ${participant.branch} · Year: ${participant.year}`);
