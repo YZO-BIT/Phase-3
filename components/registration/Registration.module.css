@@ -181,6 +181,12 @@
 .confirmationSummary dd { margin: 0; text-align: right; max-width: 60%; overflow-wrap: anywhere; }
 .confirmationSummary > div:first-child dd, .confirmationSummary > div:nth-child(4) dd { color: var(--mint); }
 .confirmationActions { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 16px; padding-top: 16px; }
+.communitySection { width: min(100%, 576px); margin: 24px auto 0; padding: 20px; border: 1px solid rgb(37 211 102 / 45%); background: rgb(37 211 102 / 7%); }
+.communitySection h4 { margin: 4px 0 8px; font-family: var(--font-space), sans-serif; font-size: 24px; line-height: 30px; text-transform: uppercase; }
+.communitySection > p:not(.stepLabel):not(.communityUnavailable) { margin: 0 auto 16px; color: var(--muted); }
+.communitySection .nextButton { background: #25d366; color: #062d14; }
+.communitySection .nextButton:hover { background: #58e889; }
+.communityUnavailable { margin: 0; color: var(--muted); font-size: 13px; line-height: 20px; }
 .statusNote { width: fit-content; max-width: 100%; margin: 16px auto 0; padding: 8px 12px; border: 1px solid rgb(0 242 254 / 30%); background: rgb(0 242 254 / 5%); color: var(--accent-muted); font-family: var(--font-space), sans-serif; font-size: 11px; line-height: 16px; letter-spacing: 0.05em; text-transform: uppercase; }
 
 @media (max-width: 1023px) {

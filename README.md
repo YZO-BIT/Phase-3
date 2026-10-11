@@ -36,7 +36,7 @@ cp .env.example .env.local
 npm run admin:password -- 'use-a-long-random-password'
 ```
 
-Set the printed `ADMIN_PASSWORD_HASH`, a 32-byte-or-longer `SESSION_SECRET`, the real HTTPS `APP_URL`, the real organizer UPI recipient, and the Google service-account values. Share the Google Sheet with `GOOGLE_SERVICE_ACCOUNT_EMAIL` as an Editor and keep the tab named `Registrations` with the exact header row defined in `lib/server/googleSheets.ts`.
+Set the printed `ADMIN_PASSWORD_HASH`, a 32-byte-or-longer `SESSION_SECRET`, the real HTTPS `APP_URL`, the real organizer UPI recipient, and the Google service-account values. `NEXT_PUBLIC_WHATSAPP_COMMUNITY_URL` is an optional public override; when it is omitted, the application uses the official TECHNIEEEKS’26 community URL bundled in `lib/whatsapp.ts`. Any configured override must be an HTTPS invitation URL whose host is exactly `chat.whatsapp.com`; an invalid override hides the button while keeping the explanatory community section. Set the variable before `next build` when changing the URL. Share the Google Sheet with `GOOGLE_SERVICE_ACCOUNT_EMAIL` as an Editor and keep the tab named `Registrations` with the exact header row defined in `lib/server/googleSheets.ts`.
 
 `PRIVATE_STORAGE_DIR` must be on persistent server storage and outside `public/`. Screenshots are decoded and normalized to private PNG files. The API never exposes the storage path; the proof route requires the participant’s signed HttpOnly cookie or the admin session.
 

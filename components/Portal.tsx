@@ -9,9 +9,11 @@ import { CyberSchedule } from "./CyberSchedule";
 import { EditorialRegistration, CyberRegistration } from "./registration/Registration";
 import { Footer } from "./Footer";
 import styles from "./Portal.module.css";
+import { getWhatsAppCommunityInviteUrl } from "@/lib/whatsapp";
 
 export function Portal({ variant }: { variant: PortalVariant }) {
   const cyber = variant === "cyber";
+  const communityInviteUrl = getWhatsAppCommunityInviteUrl();
   return (
     <div className={`${styles.portal} ${cyber ? styles.cyber : styles.editorial}`}>
       <a className="skip-link" href="#main-content">Skip to main content</a>
@@ -21,7 +23,7 @@ export function Portal({ variant }: { variant: PortalVariant }) {
         <Protocols variant={variant} />
         {cyber ? <EventsCatalog /> : <EventsList />}
         {cyber ? <CyberSchedule /> : <EditorialSchedule />}
-        {cyber ? <CyberRegistration /> : <EditorialRegistration />}
+        {cyber ? <CyberRegistration communityInviteUrl={communityInviteUrl} /> : <EditorialRegistration communityInviteUrl={communityInviteUrl} />}
       </main>
       <Footer variant={variant} />
     </div>
