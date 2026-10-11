@@ -668,12 +668,13 @@ No actual secret values were printed or read into this document.
 | `GOOGLE_SHEET_NAME` | Tab name | `config.ts`, `googleSheets.ts` | Yes; default exists but set explicitly | No | `Registrations` | Railway Variables |
 | `PAYMENT_UPI_ID` | Organizer UPI recipient encoded into UPI URI/QR | `config.ts`, `controllers.ts` | Yes | Sensitive operational value | `organizer@bank` | Railway Variables |
 | `PAYMENT_PAYEE_NAME` | Payee shown in UPI instructions | `config.ts`, `controllers.ts` | Yes | No | `IEEE SB GEHU` | Railway Variables |
+| `NEXT_PUBLIC_WHATSAPP_COMMUNITY_URL` | Optional public WhatsApp Community invitation override shown after successful registration; the official organizer URL is bundled as the default | `lib/whatsapp.ts`, `components/Portal.tsx`, `components/registration/RegistrySteps.tsx` | No; bundled official default exists | No; intentionally public | `https://chat.whatsapp.com/<invite-code>` | Railway Variables before build when overriding |
 | `PRIVATE_STORAGE_DIR` | Persistent private filesystem path | `config.ts`, `privateStore.ts` | Yes for safe deployment | No, but critical | `/app/.private` | Railway Variables + volume mount |
 | `TRUST_PROXY` | Enables trusted client-IP extraction from `X-Forwarded-For` | `config.ts`, `controllers.ts` | Only if proxy is configured to overwrite header | No | `false` or `true` | Railway Variables |
 
 ### Secret handling rules
 
-- Never use `NEXT_PUBLIC_` for any value above.
+- Never use `NEXT_PUBLIC_` for secrets or sensitive values above. The WhatsApp invitation is the intentional public exception.
 - Never commit `.env.local`, `.env.production`, `.env`, service-account JSON, password hashes, or session secrets.
 - The repository `.gitignore` now ignores `.env*` while allowing only `.env.example`.
 - Rotate `SESSION_SECRET` invalidates all active participant/admin cookies; plan rotation during a maintenance window.
