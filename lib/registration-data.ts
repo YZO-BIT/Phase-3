@@ -35,7 +35,7 @@ export const registrationSchema = z.object({
   if (input.amount !== selected.reduce((sum, event) => sum + event.fee, 0)) ctx.addIssue({ code: "custom", path: ["amount"], message: "Payment amount does not match the selected events" });
   const requiredMembers = Math.max(1, ...selected.map((event) => event.members)) - 1;
   if (requiredMembers > 0 && (!input.teamName || input.members.length < requiredMembers || input.members.length > requiredMembers + 1)) ctx.addIssue({ code: "custom", path: ["members"], message: "Complete the team name and all required roster members" });
-  if (!requiredMembers && input.members.length) ctx.addIssue({ code: "custom", path: ["members"], message: "Individual events do not require a team roster" });
+  if (!requiredMembers && (input.teamName || input.members.length)) ctx.addIssue({ code: "custom", path: ["members"], message: "Individual events do not require a team roster" });
   const enrollments = [input.participant.enrollment, ...input.members.map((member) => member.enrollment)];
   const emails = [input.participant.email, ...input.members.map((member) => member.email)];
   if (new Set(enrollments).size !== enrollments.length || new Set(emails).size !== emails.length) ctx.addIssue({ code: "custom", path: ["members"], message: "Each team member needs a unique enrollment number and email" });

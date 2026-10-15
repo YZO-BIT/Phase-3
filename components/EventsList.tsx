@@ -15,7 +15,7 @@ export function EventsList() {
           <article className={styles.eventRow} key={event.id}>
             <span className={styles.eventNumber}>{String(index + 1).padStart(2, "0")}</span>
             <div className={styles.eventRowTitle}><div><h3>{event.title}</h3>{event.id === "ctf" && <span className={styles.criticalBadge}>Critical</span>}</div><p>{event.editorialDescription}</p></div>
-             <div className={styles.eventRowMeta}><strong>{eventDateLabel(event)} • {eventScheduleLabel(event)}</strong><span>{event.editorialVenue} • {event.members === 1 ? "INDIVIDUAL" : `${event.id === "val" ? "TEAM" : "SQUAD"} (${event.id === "ctf" ? "2-3" : event.id === "hunt" ? "3-4" : event.members})`}</span></div>
+             <div className={styles.eventRowMeta}><strong>{eventDateLabel(event)} • {eventScheduleLabel(event)}</strong><span>{event.editorialVenue} • {event.members === 1 ? "INDIVIDUAL" : `${event.id === "val" ? "TEAM" : "SQUAD"} (${event.id === "hunt" ? "3-4" : event.members})`}</span></div>
             <span className={styles.eventRowFee}>{currency(event.fee)}</span>
             <SelectEventButton id={event.id} className={styles.selectSlot}>Select Slot<span className="sr-only"> for {event.title}</span></SelectEventButton>
           </article>

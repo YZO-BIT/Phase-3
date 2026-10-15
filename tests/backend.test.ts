@@ -135,6 +135,53 @@ test("registration persists a real image and exactly ordered PENDING/NOT_READY G
   assert.equal((await sharp(Buffer.from(await proof.arrayBuffer())).metadata()).format, "png");
 });
 
+test("CTF registers individually at ₹50 and keeps payment pending until admin approval", async (t) => {
+  const f = await fixture(t);
+  const payment = await f.app.payment(new Request(`${origin}/api/payment?events=ctf`));
+  assert.equal(payment.status, 200);
+  assert.equal((await payment.json()).amount, 50);
+  const response = await f.submit({ ...payload(), eventIds: ["ctf"], amount: 50, paymentMethod: "OFFLINE" }, null);
+  assert.equal(response.status, 201);
+  const registration = await response.json();
+  assert.equal(registration.amount, 50);
+  assert.equal(registration.paymentMethod, "OFFLINE");
+  assert.equal(registration.paymentStatus, "PENDING");
+  assert.equal(f.google.rows[1][2], "Capture the Flag (CTF)");
+  assert.equal(f.google.rows[1][6], "Individual");
+  assert.equal(f.google.rows[1][7], "1");
+  assert.equal(f.google.rows[1][28], "50");
+  assert.equal(f.google.rows[1][30], "PENDING");
+  const admin = await f.login();
+  const details = await f.app.adminDetails(new Request(`${origin}/api/admin/registrations/${registration.id}`, { headers: { cookie: admin } }), f.context(registration.id));
+  assert.equal(details.status, 200);
+  const detailBody = await details.json();
+  assert.equal(detailBody.registration.amount, 50);
+  assert.equal(detailBody.registration.teamName, "");
+  assert.deepEqual(detailBody.members, []);
+  const approved = await f.decide(registration.id, admin);
+  assert.equal(approved.status, 200);
+  assert.equal(f.google.rows[1][30], "APPROVED");
+  const approvedBody = await approved.json();
+  assert.equal(approvedBody.amount, 50);
+  assert.equal(approvedBody.pdfStatus, "READY");
+  const pdf = await f.app.pdf(f.request(registration.id, cookieFrom(response)), f.context(registration.id));
+  assert.equal(pdf.status, 200);
+  assert.equal(pdf.headers.get("content-type"), "application/pdf");
+});
+
+test("CTF backend rejects forged fees and stale team data", async (t) => {
+  const f = await fixture(t);
+  for (const data of [
+    { ...payload(), eventIds: ["ctf"], amount: 100, paymentMethod: "OFFLINE" },
+    { ...payload(), eventIds: ["ctf"], amount: 50, paymentMethod: "OFFLINE", teamName: "Stale Team" },
+    { ...payload(), eventIds: ["ctf"], amount: 50, paymentMethod: "OFFLINE", members: [{ name: "Teammate", enrollment: "GEHU/2026/CS/MEMBER1", email: "member@example.test", phone: "+91 98765 43211" }] },
+  ]) {
+    const response = await f.submit(data, null);
+    assert.equal(response.status, 400);
+  }
+  assert.equal(f.google.appends, 0);
+});
+
 test("missing screenshot is rejected by the backend and produces no registration", async (t) => {
   const f = await fixture(t);
   const response = await f.submit(payload(), null);

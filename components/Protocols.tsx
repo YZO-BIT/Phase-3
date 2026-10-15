@@ -10,7 +10,7 @@ const editorialRules = [
 ];
 const cyberRules = [
   { icon: "timer", title: "Simultaneous Tracks", text: "Some events run concurrently or in overlapping slots. Double registrations during colliding slots are physically barred." },
-  { icon: "group_work", title: "Single Team Captain", text: "For squad events (BGMI, CTF, Valorant, Treasure Hunt), only the team lead should initiate and complete squad roster entries." },
+  { icon: "group_work", title: "Single Team Captain", text: "For team events (BGMI, Valorant, Free Fire Max, and Treasure Hunt), only the team lead should initiate and complete squad roster entries." },
   { icon: "schedule", title: "Multi-Event Capability", text: "You may register for as many events as you like as long as their timetable allocations do not intersect." },
   { icon: "badge", title: "Credentials Verification", text: "Ensure university enrollment IDs and institutional emails are 100% genuine. Discrepancies lead to immediate disqualification." },
   { icon: "receipt_long", title: "Dynamic Tier Pricing", text: "The final checkout sum is calculated transparently based on your collective individual and team track selections." },

@@ -7,7 +7,6 @@ export type FrontendEvent = FestivalEvent & {
   officialStage: string;
   officialVenue: string;
   officialMode: string;
-  officialMembers?: number;
   hosts: readonly string[];
   isEsports: boolean;
 };
@@ -19,7 +18,7 @@ const officialDetails: Record<string, Omit<FrontendEvent, keyof FestivalEvent>> 
   },
   ctf: {
     officialDate: "17 October 2026", officialDay: 2, officialTime: "12:00 PM–4:00 PM", officialStage: "Technical / Day 2",
-    officialVenue: "TCL 302B", officialMode: "Team (2–3 Players)", officialMembers: 3, hosts: ["Sachin", "Aadarsh"], isEsports: false,
+    officialVenue: "TCL 302B", officialMode: "Individual", hosts: ["Sachin", "Aadarsh"], isEsports: false,
   },
   chess: {
     officialDate: "17 October 2026", officialDay: 2, officialTime: "12:00 PM–4:00 PM", officialStage: "Gaming / Day 2",
