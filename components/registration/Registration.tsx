@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { currency } from "@/lib/events";
 import type { PaymentMethod, RegistrationView } from "@/lib/registration-data";
 import { Icon } from "../Icon";
@@ -84,7 +84,9 @@ export function EditorialRegistration({ communityInviteUrl }: { communityInviteU
   const [utr, setUtr] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("ONLINE");
   const [agreements, setAgreements] = useState({ authentic: true, conduct: true });
+  const hasTeamEvents = selection.selectedEvents.some((event) => event.members > 1);
   const flow = useRegistrationSubmit({ participant, eventIds: selection.selectedIds, teamName, members, utr, agreements, amount: selection.total, paymentMethod });
+  useEffect(() => { if (!hasTeamEvents) { setTeamName(""); setMembers([]); } }, [hasTeamEvents]);
 
   async function submitRegistration() { if (await flow.submit()) setStep(5); }
   function reset() { flow.reset(); setStep(1); setUtr(""); setTeamName(""); setMembers([]); setPaymentMethod("ONLINE"); window.location.hash = "home"; }
@@ -124,7 +126,9 @@ export function CyberRegistration({ communityInviteUrl }: { communityInviteUrl: 
   const [agreements, setAgreements] = useState({ authentic: true, conduct: true });
   const [selectionError, setSelectionError] = useState("");
   const form = useRef<HTMLFormElement>(null);
+  const hasTeamEvents = selection.selectedEvents.some((event) => event.members > 1);
   const flow = useRegistrationSubmit({ participant, eventIds: selection.selectedIds, teamName, members, utr, agreements, amount: selection.total, paymentMethod });
+  useEffect(() => { if (!hasTeamEvents) { setTeamName(""); setMembers([]); } }, [hasTeamEvents]);
 
   function goToStep(target: number) {
     if (target > step && !form.current?.reportValidity()) return;

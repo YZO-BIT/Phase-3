@@ -7,13 +7,23 @@ test("every Phase 3 event has its final date and preserved start time and price"
   const expected: Record<string, [number, number, number]> = {
     bgmi: [16, 600, 300], ff: [16, 600, 300], karts: [16, 600, 80],
     val: [16, 600, 500], royale: [16, 600, 80], cp: [17, 720, 100],
-    ctf: [17, 720, 100], chess: [17, 720, 100], hunt: [17, 720, 300], trivia: [16, 600, 80],
+    ctf: [17, 720, 50], chess: [17, 720, 100], hunt: [17, 720, 300], trivia: [16, 600, 80],
   };
   assert.equal(events.length, 10);
   for (const event of events) {
     assert.deepEqual([event.date, event.start, event.fee], expected[event.id], event.title);
     assert.equal(event.day, event.date === 16 ? 1 : 2);
   }
+});
+
+test("CTF is an individual ₹50 competition without changing other team event contracts", () => {
+  const ctf = events.find((event) => event.id === "ctf")!;
+  const hunt = events.find((event) => event.id === "hunt")!;
+  assert.deepEqual({ mode: ctf.mode, members: ctf.members, fee: ctf.fee, feeUnit: ctf.feeUnit }, { mode: "Individual", members: 1, fee: 50, feeUnit: undefined });
+  const ctfFrontend = frontendEventById.get("ctf")!;
+  assert.equal(ctfFrontend.officialMode, "Individual");
+  assert.equal("officialMembers" in ctfFrontend, false);
+  assert.deepEqual({ mode: hunt.mode, members: hunt.members, fee: hunt.fee, feeUnit: hunt.feeUnit }, { mode: "Team (3–4 Players)", members: 4, fee: 300, feeUnit: "team" });
 });
 
 test("all 16 October qualifying entries conflict with each other, including Royale and Karts", () => {

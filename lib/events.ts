@@ -53,7 +53,7 @@ export const events: FestivalEvent[] = [
   {
     id: "ctf", title: "Capture the Flag (CTF)", icon: "security", day: 2, date: 17, start: 720, end: 960,
     slot: "12:00 PM – 4:00 PM", time: "12:00 PM", sessions: technicalSessions,
-    mode: "Team (2–3 Players)", members: 3, fee: 100, feeUnit: "team", venue: "Cyber Command Lab 4",
+    mode: "Individual", members: 1, fee: 50, venue: "Cyber Command Lab 4",
     description: "Jeopardy-style offensive cybersecurity covering binary exploitation, cryptography, network forensics & web app pentesting.",
     editorialDescription: "Reverse Eng & Binary Pwn", editorialVenue: "CYBER COMMAND",
   },

@@ -29,6 +29,15 @@ test("payment method is an explicit online/offline allowlist", () => {
   assert.throws(() => registrationSchema.parse({ ...registration, paymentMethod: "CASH" }), /payment method/i);
 });
 
+test("CTF accepts an individual registration at ₹50 and compatible individual selections", () => {
+  const ctf = { ...registration, eventIds: ["ctf"], amount: 50, paymentMethod: "OFFLINE" };
+  assert.equal(registrationSchema.parse(ctf).amount, 50);
+  assert.equal(registrationSchema.parse({ ...ctf, eventIds: ["ctf", "trivia"], amount: 130 }).members.length, 0);
+  assert.throws(() => registrationSchema.parse({ ...ctf, amount: 100 }), /payment amount/i);
+  assert.throws(() => registrationSchema.parse({ ...ctf, teamName: "CTF Team" }), /individual events do not require a team roster/i);
+  assert.throws(() => registrationSchema.parse({ ...ctf, members: [{ name: "Teammate", enrollment: "GEHU/2026/CS/MEMBER1", email: "member@example.test", phone: "+91 98765 43211" }] }), /individual events do not require a team roster/i);
+});
+
 test("offline registrations accept missing or blank UTR and retain legacy references", () => {
   const { utr: _utr, ...withoutUtr } = registration;
   assert.equal(registrationSchema.parse({ ...withoutUtr, paymentMethod: "OFFLINE" }).utr, "");
