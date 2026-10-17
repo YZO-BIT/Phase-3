@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import { test, type TestContext } from "node:test";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { randomBytes, scryptSync } from "node:crypto";
 import sharp from "sharp";
 import { PDFDocument } from "pdf-lib";
+import { PrivateStore } from "../lib/server/privateStore";
 
 // Only the external Google API is replaced. Controllers, auth, image decoding,
 // filesystem persistence, locking, approval, and PDF generation are real.
@@ -84,12 +85,14 @@ async function fixture(t: TestContext) {
   t.after(() => rm(root, { recursive: true, force: true }));
   const google = new SheetsTransport();
   const salt = randomBytes(16).toString("hex");
-  const app = createApplication({
-    appUrl: origin, sessionSecret: randomBytes(48).toString("hex"), privateStorageDir: root, trustProxy: false,
+  const config = {
+    appUrl: origin, sessionSecret: randomBytes(48).toString("hex"), privateStorageDir: root, privateStorageConfigured: true, trustProxy: false,
     google: { sheetId: "test-sheet", sheetName: "Registrations", email: "test@example.test", privateKey: "not-a-live-key" },
     admin: { email: "admin@example.test", passwordHash: `scrypt:${salt}:${scryptSync("test-password-12345", salt, 64).toString("hex")}` },
     payment: { upiId: "test@upi", payeeName: "Test Organizer" },
-  }, { sheetFetch: google.fetch, googleToken: async () => "test-google-token" });
+  };
+  const dependencies = { sheetFetch: google.fetch, googleToken: async () => "test-google-token" };
+  const app = createApplication(config, dependencies);
   const image = await sharp({ create: { width: 8, height: 8, channels: 3, background: "#6ff6ff" } }).png().toBuffer();
   async function submit(data: unknown = payload(), proof: File | null = new File([image], "payment.png", { type: "image/png" }), cookie = "") {
     const form = new FormData();
@@ -105,7 +108,7 @@ async function fixture(t: TestContext) {
   const context = (id: string) => ({ params: Promise.resolve({ id }) });
   const request = (id: string, cookie: string) => new Request(`${origin}/pdf/${id}`, { headers: { cookie } });
   const decide = (id: string, cookie: string, decision = "APPROVE", remarks = "Payment checked against the bank statement") => app.decide(new Request(`${origin}/api/admin/registrations/${id}/decision`, { method: "POST", headers: { origin, cookie, "content-type": "application/json" }, body: JSON.stringify({ decision, remarks }) }), context(id));
-  return { app, google, submit, login, context, request, decide, root, image };
+  return { app, google, submit, login, context, request, decide, root, image, recreate: () => createApplication(config, dependencies) };
 }
 
 test("registration persists a real image and exactly ordered PENDING/NOT_READY Google row", async (t) => {
@@ -119,6 +122,7 @@ test("registration persists a real image and exactly ordered PENDING/NOT_READY G
   assert.equal(reg.pdfUrl, null);
   assert.equal(f.google.rows[0].length, 37);
   const row = f.google.rows[1];
+  assert.equal(row[0], reg.id);
   assert.equal(row[2], "Competitive Programming");
   assert.equal(row[3], "17 October 2026");
   assert.equal(row[4], "17 October 2026 · 12:00 PM – 4:00 PM");
@@ -133,6 +137,19 @@ test("registration persists a real image and exactly ordered PENDING/NOT_READY G
   assert.equal(proof.status, 200);
   assert.equal(proof.headers.get("content-type"), "image/png");
   assert.equal((await sharp(Buffer.from(await proof.arrayBuffer())).metadata()).format, "png");
+});
+
+test("a recreated application resolves the dossier using the exact Sheet registration ID", async (t) => {
+  const f = await fixture(t);
+  const response = await f.submit();
+  const registration = await response.json();
+  const stored = JSON.parse(await readFile(join(f.root, registration.id, "record.json"), "utf8"));
+  assert.equal(stored.id, registration.id);
+  assert.equal(f.google.rows[1][0], registration.id);
+  const admin = await f.login();
+  const details = await f.recreate().adminDetails(new Request(`${origin}/api/admin/registrations/${registration.id}`, { headers: { cookie: admin } }), f.context(registration.id));
+  assert.equal(details.status, 200);
+  assert.equal((await details.json()).registration.id, registration.id);
 });
 
 test("CTF registers individually at ₹50 and keeps payment pending until admin approval", async (t) => {
@@ -188,6 +205,25 @@ test("missing screenshot is rejected by the backend and produces no registration
   assert.equal(response.status, 400);
   assert.match((await response.json()).error, /screenshot required/i);
   assert.equal(f.google.appends, 0);
+});
+
+test("private storage failures fail closed before a Google Sheets row is created", async (t) => {
+  const f = await fixture(t);
+  await rm(f.root, { recursive: true, force: true });
+  await writeFile(f.root, "not a directory", { mode: 0o600 });
+  const response = await f.submit();
+  assert.equal(response.status, 503);
+  assert.match((await response.json()).error, /persistent private registration storage/i);
+  assert.equal(f.google.appends, 0);
+  assert.equal(f.google.rows.length, 0);
+});
+
+test("private dossier writes convert per-registration directory failures to controlled storage errors", async (t) => {
+  const root = await mkdtemp(join(tmpdir(), "phase3-private-store-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const id = "PG-2026-0123456789ABCDEF";
+  await writeFile(join(root, id), "not a directory", { mode: 0o600 });
+  await assert.rejects(() => new PrivateStore(root).saveProof(id, new Uint8Array([1, 2, 3])), /persistent private registration storage/i);
 });
 
 test("offline payment is accepted without UTR or screenshot and remains pending", async (t) => {
@@ -277,6 +313,8 @@ test("admin list identifiers open the matching details and payment information",
   assert.equal(listed.status, 200);
   const listedBody = await listed.json();
   assert.equal(listedBody.registrations[0].id, createdBody.id);
+  assert.equal(listedBody.registrations[0].academicYear, "3rd Year");
+  for (const privateField of ["participant", "members", "utr", "owner", "input", "proofHash"]) assert.equal(privateField in listedBody.registrations[0], false);
   const details = await f.app.adminDetails(new Request(`${origin}/api/admin/registrations/${encodeURIComponent(listedBody.registrations[0].id)}`, { headers: { cookie: admin } }), f.context(listedBody.registrations[0].id));
   assert.equal(details.status, 200);
   const detailBody = await details.json();
@@ -284,6 +322,67 @@ test("admin list identifiers open the matching details and payment information",
   assert.equal(detailBody.participant.name, "Test Participant");
   assert.equal(detailBody.registration.paymentMethod, "ONLINE");
   assert.equal(detailBody.utr, "123456789012");
+});
+
+test("admin list uses the captain year for team registrations without adding member data", async (t) => {
+  const f = await fixture(t);
+  const created = await f.submit({
+    ...payload("GEHU/2026/CS/TEAM001"),
+    participant: { ...payload().participant, enrollment: "GEHU/2026/CS/TEAM001", year: "4th Year" },
+    eventIds: ["bgmi"], amount: 300, paymentMethod: "OFFLINE", teamName: "North Stars",
+    members: [
+      { name: "Member One", enrollment: "GEHU/2026/CS/TEAM002", email: "member1@example.test", phone: "+91 98765 43211" },
+      { name: "Member Two", enrollment: "GEHU/2026/CS/TEAM003", email: "member2@example.test", phone: "+91 98765 43212" },
+      { name: "Member Three", enrollment: "GEHU/2026/CS/TEAM004", email: "member3@example.test", phone: "+91 98765 43213" },
+    ],
+  }, null);
+  assert.equal(created.status, 201);
+  const admin = await f.login();
+  const listed = await f.app.adminList(new Request(`${origin}/api/admin/registrations?status=PENDING`, { headers: { cookie: admin } }));
+  assert.equal(listed.status, 200);
+  const registration = (await listed.json()).registrations[0];
+  assert.equal(registration.academicYear, "4th Year");
+  assert.equal("members" in registration, false);
+  assert.equal("participant" in registration, false);
+});
+
+test("admin list returns a null academic year for a legacy dossier without one", async (t) => {
+  const f = await fixture(t);
+  const created = await f.submit({ ...payload(), paymentMethod: "OFFLINE" }, null);
+  const { id } = await created.json();
+  const recordPath = join(f.root, id, "record.json");
+  const stored = JSON.parse(await readFile(recordPath, "utf8"));
+  delete stored.input.participant.year;
+  await writeFile(recordPath, JSON.stringify(stored));
+  const admin = await f.login();
+  const listed = await f.app.adminList(new Request(`${origin}/api/admin/registrations?status=PENDING`, { headers: { cookie: admin } }));
+  assert.equal(listed.status, 200);
+  assert.equal((await listed.json()).registrations[0].academicYear, null);
+});
+
+test("academic year follows registrations across pending, approved, rejected, and all admin filters", async (t) => {
+  const f = await fixture(t);
+  const pending = await f.submit({ ...payload("GEHU/2026/CS/YEAR001"), paymentMethod: "OFFLINE", participant: { ...payload().participant, enrollment: "GEHU/2026/CS/YEAR001", year: "1st Year" } }, null);
+  const approved = await f.submit({ ...payload("GEHU/2026/CS/YEAR002"), paymentMethod: "OFFLINE", participant: { ...payload().participant, enrollment: "GEHU/2026/CS/YEAR002", year: "2nd Year" } }, null);
+  const rejected = await f.submit({ ...payload("GEHU/2026/CS/YEAR003"), paymentMethod: "OFFLINE", participant: { ...payload().participant, enrollment: "GEHU/2026/CS/YEAR003", year: "Postgraduate / Research Scholar" } }, null);
+  assert.equal(pending.status, 201);
+  assert.equal(approved.status, 201);
+  assert.equal(rejected.status, 201);
+  const approvedId = (await approved.json()).id;
+  const rejectedId = (await rejected.json()).id;
+  const admin = await f.login();
+  assert.equal((await f.decide(approvedId, admin)).status, 200);
+  assert.equal((await f.decide(rejectedId, admin, "REJECT", "Reference not matched")).status, 200);
+  for (const [status, expectedYear] of [["PENDING", "1st Year"], ["APPROVED", "2nd Year"], ["REJECTED", "Postgraduate / Research Scholar"]] as const) {
+    const response = await f.app.adminList(new Request(`${origin}/api/admin/registrations?status=${status}`, { headers: { cookie: admin } }));
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.equal(body.registrations.length, 1);
+    assert.equal(body.registrations[0].academicYear, expectedYear);
+  }
+  const all = await f.app.adminList(new Request(`${origin}/api/admin/registrations?status=ALL`, { headers: { cookie: admin } }));
+  assert.equal(all.status, 200);
+  assert.deepEqual(new Set((await all.json()).registrations.map((registration: { academicYear: string }) => registration.academicYear)), new Set(["1st Year", "2nd Year", "Postgraduate / Research Scholar"]));
 });
 
 test("a Sheet-listed registration with no private dossier reports dossier loss instead of not found", async (t) => {
@@ -294,7 +393,7 @@ test("a Sheet-listed registration with no private dossier reports dossier loss i
   const admin = await f.login();
   const details = await f.app.adminDetails(new Request(`${origin}/api/admin/registrations/${id}`, { headers: { cookie: admin } }), f.context(id));
   assert.equal(details.status, 503);
-  assert.match((await details.json()).error, /private registration dossier is unavailable/i);
+  assert.match((await details.json()).error, /no private data was reconstructed.*recovery/i);
 });
 
 test("a genuinely absent registration remains a safe not-found response", async (t) => {

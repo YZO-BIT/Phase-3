@@ -54,5 +54,6 @@ export type RegistrationView = {
   amount: number; proofUrl: string; paymentStatus: PaymentStatus; pdfStatus: PdfStatus; pdfUrl: string | null;
   remarks: string; verifiedBy: string; verifiedAt: string;
 };
+export type AdminRegistrationSummary = RegistrationView & { academicYear: string | null };
 export const MAX_SCREENSHOT_BYTES = 5 * 1024 * 1024;
 export const SCREENSHOT_TYPES = ["image/png", "image/jpeg", "image/webp"];
