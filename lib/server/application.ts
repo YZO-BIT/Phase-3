@@ -1,4 +1,5 @@
 import "server-only";
+import { loadEnvConfig } from "@next/env";
 import { readConfig, type ServerConfig } from "./config";
 import { AuthService } from "./auth";
 import { GoogleSheetsRepository } from "./googleSheets";
@@ -13,4 +14,13 @@ export function createApplication(config: ServerConfig, dependencies: { sheetFet
   return new RegistrationController(service, new AuthService(config), config);
 }
 let application: RegistrationController | undefined;
-export const getApplication = () => application ??= createApplication(readConfig());
+let environmentLoaded = false;
+function ensureLocalEnvironmentLoaded() {
+  if (environmentLoaded || process.env.NODE_ENV === "production") { environmentLoaded = true; return; }
+  loadEnvConfig(process.cwd(), true, { info: () => {}, error: () => { throw new Error("Local environment configuration could not be loaded."); } });
+  environmentLoaded = true;
+}
+export const getApplication = () => {
+  if (!application) { ensureLocalEnvironmentLoaded(); application = createApplication(readConfig()); }
+  return application;
+};
