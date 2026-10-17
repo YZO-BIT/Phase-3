@@ -3,14 +3,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { currency } from "@/lib/events";
-import type { Participant, RegistrationView, TeamMember } from "@/lib/registration-data";
-import { Icon } from "../Icon";
+import type { AdminRegistrationSummary, Participant, RegistrationView, TeamMember } from "@/lib/registration-data";
 import formStyles from "../registration/Registration.module.css";
 import styles from "./Admin.module.css";
+import { RegistrationCard } from "./RegistrationCard";
 
 type EventCount = { eventId: string; title: string; dates: string; count: number };
 type Registry = {
-  registrations: RegistrationView[];
+  registrations: AdminRegistrationSummary[];
   statistics: { total: number; pending: number; approved: number; rejected: number; pdfs: number };
   eventCounts: EventCount[];
   pagination: { page: number; pageSize: number; total: number; totalPages: number };
@@ -133,11 +133,7 @@ export function AdminDashboard({ adminEmail }: { adminEmail: string }) {
     {registry && <div className={styles.eventCounts} aria-label="Event registration counts">{registry.eventCounts.map((item) => <button type="button" key={item.eventId} className={eventId === item.eventId ? styles.activeEventCount : ""} onClick={() => { setEventId(item.eventId); setPage(1); }}><strong>{item.count}</strong><span>{item.title}</span><small>{item.dates} October</small></button>)}</div>}
     {loading && <p role="status">Loading registrations from Google Sheets…</p>}
     {!loading && registry && !visible.length && <p className={styles.empty}>No registrations match the selected filters.</p>}
-    {!loading && registry && visible.length > 0 && <div className={styles.eventSections}>{grouped.filter((section) => section.registrations.length > 0).map((section) => <section key={section.eventId} aria-labelledby={`event-${section.eventId}`}><div className={styles.eventSectionHeading}><h2 id={`event-${section.eventId}`}>{section.title}</h2><span>{section.count} total</span></div><div className={styles.registrations}>{section.registrations.map((registration) => <article key={`${section.eventId}-${registration.id}`} className={formStyles.registryPanel}>
-      <p className={formStyles.stepLabel}>{registration.id} • {paymentLabel(registration)}</p><h3>{registration.teamName || registration.participantName}</h3><p>{registration.eventNames}</p>
-      <dl className={styles.details}><div><dt>Event Date</dt><dd>{registration.eventDates}</dd></div><div><dt>Scheduled Time</dt><dd>{registration.eventTimes}</dd></div><div><dt>Captain</dt><dd>{registration.participantName}</dd></div><div><dt>Email</dt><dd>{registration.email}</dd></div><div><dt>Phone</dt><dd>{registration.phone}</dd></div><div><dt>College</dt><dd>{registration.college}</dd></div><div><dt>Payment Method</dt><dd>{registration.paymentMethod === "OFFLINE" ? "Offline Payment" : "Online Payment"}</dd></div><div><dt>Payment Amount</dt><dd>{currency(registration.amount)}</dd></div><div><dt>Registration Date</dt><dd>{new Date(registration.createdAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</dd></div></dl>
-      <button type="button" className={formStyles.backButton} disabled={busy} onClick={() => void openDetails(registration.id)}><Icon name="visibility" />View Payment &amp; Details</button>
-    </article>)}</div></section>)}</div>}
+    {!loading && registry && visible.length > 0 && <div className={styles.eventSections}>{grouped.filter((section) => section.registrations.length > 0).map((section) => <section key={section.eventId} aria-labelledby={`event-${section.eventId}`}><div className={styles.eventSectionHeading}><h2 id={`event-${section.eventId}`}>{section.title}</h2><span>{section.count} total</span></div><div className={styles.registrations}>{section.registrations.map((registration) => <RegistrationCard key={`${section.eventId}-${registration.id}`} registration={registration} disabled={busy} onOpen={(id) => void openDetails(id)} />)}</div></section>)}</div>}
     {registry && registry.pagination.totalPages > 1 && <div className={styles.pagination}><button className={formStyles.backButton} type="button" disabled={busy || registry.pagination.page <= 1} onClick={() => setPage((current) => current - 1)}>Previous</button><span>Page {registry.pagination.page} of {registry.pagination.totalPages} · {registry.pagination.total} matches</span><button className={formStyles.backButton} type="button" disabled={busy || registry.pagination.page >= registry.pagination.totalPages} onClick={() => setPage((current) => current + 1)}>Next</button></div>}
     {details && <div ref={detailsPanel} tabIndex={-1} className={`${formStyles.registryPanel} ${styles.review}`} aria-label={`Payment review for ${details.registration.id}`}>
       <p className={formStyles.stepLabel}>{details.registration.id} • {paymentLabel(details.registration)}</p><h2>Payment Review</h2>

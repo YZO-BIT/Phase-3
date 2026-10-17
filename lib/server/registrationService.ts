@@ -1,13 +1,13 @@
 import "server-only";
 import { createHmac } from "node:crypto";
 import { eventDateLabel, eventScheduleLabel, events } from "../events";
-import { registrationSchema, type RegistrationInput, type RegistrationView } from "../registration-data";
+import { registrationSchema, type AdminRegistrationSummary, type RegistrationInput, type RegistrationView } from "../registration-data";
 import type { Principal } from "./auth";
 import type { ServerConfig } from "./config";
-import { assertPaymentConfigured, assertSessionConfigured } from "./config";
+import { assertPaymentConfigured, assertPersistentStorageConfigured, assertSessionConfigured } from "./config";
 import { GoogleSheetsRepository, type SheetRow } from "./googleSheets";
 import { PrivateStore, type PrivateRecord } from "./privateStore";
-import { GoogleSheetsError, HttpError } from "./errors";
+import { GoogleSheetsError, HttpError, MISSING_DOSSIER_ERROR } from "./errors";
 import { sha256, validateScreenshot } from "./images";
 import { generateRegistrationPdf } from "./pdf";
 
@@ -64,15 +64,17 @@ export class RegistrationService {
     return record;
   }
   private async authorizedRecord(id: string, principal: Principal) {
+    assertPersistentStorageConfigured(this.config);
     const record = await this.store.readRecord(id);
     if (!record) throw new HttpError(404, "Registration not found.");
     return this.validateStoredRecord(record, id, principal);
   }
   private async adminRecord(id: string, admin: Principal) {
+    assertPersistentStorageConfigured(this.config);
     const record = await this.store.readRecord(id);
     if (!record) {
       const listed = await this.sheets.getRegistrationFromSheet(id);
-      if (listed) throw new HttpError(503, "Registration is listed in Google Sheets, but its private registration dossier is unavailable. Contact the organizer.");
+      if (listed) throw new HttpError(503, MISSING_DOSSIER_ERROR);
       throw new HttpError(404, "Registration not found.");
     }
     return this.validateStoredRecord(record, id, admin);
@@ -89,6 +91,7 @@ export class RegistrationService {
   async register(rawInput: unknown, screenshot: File | null, principal: Principal) {
     const input = registrationSchema.parse(rawInput);
     assertSessionConfigured(this.config);
+    assertPersistentStorageConfigured(this.config);
     if (input.paymentMethod === "ONLINE") {
       assertPaymentConfigured(this.config);
       if (!screenshot) throw new HttpError(400, "Payment screenshot required for Online Payment.");
@@ -153,6 +156,12 @@ export class RegistrationService {
     if (record.input.paymentMethod === "ONLINE") await this.store.readProof(record);
     return this.store.readPdf(record);
   }
+  private async academicYear(registration: RegistrationView) {
+    try {
+      return await this.store.readAcademicYear(registration.id, { name: registration.participantName, email: registration.email });
+    }
+    catch (error) { if (error instanceof HttpError && error.status === 503) return null; throw error; }
+  }
   async adminList(filters: AdminListFilters = {}) {
     const allRegistrations = (await this.sheets.listRegistrations()).map(view).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     const statistics = { total: allRegistrations.length, pending: 0, approved: 0, rejected: 0, pdfs: 0 };
@@ -173,7 +182,8 @@ export class RegistrationService {
     const page = Math.max(filters.page || 1, 1);
     const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
     const currentPage = Math.min(page, totalPages);
-    const registrations = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+    const pageRegistrations = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+    const registrations: AdminRegistrationSummary[] = await Promise.all(pageRegistrations.map(async (registration) => ({ ...registration, academicYear: await this.academicYear(registration) })));
     return { registrations, statistics, eventCounts, pagination: { page: currentPage, pageSize, total: filtered.length, totalPages } };
   }
   async adminDetails(id: string, admin: Principal) {

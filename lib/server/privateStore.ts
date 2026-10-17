@@ -1,10 +1,10 @@
 import "server-only";
-import { mkdir, readFile, writeFile, rename, readdir, unlink } from "node:fs/promises";
+import { access, constants, mkdir, readFile, writeFile, rename, readdir, stat, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 import lockfile from "proper-lockfile";
-import type { RegistrationInput } from "../registration-data";
-import { HttpError } from "./errors";
+import { registrationSchema, type RegistrationInput } from "../registration-data";
+import { HttpError, PERSISTENT_STORAGE_ERROR } from "./errors";
 import { sha256 } from "./images";
 
 export type PrivateRecord = {
@@ -16,12 +16,26 @@ export const isRegistrationId = (id: string) => /^PG-2026-[A-F0-9]{16}$/.test(id
 
 export class PrivateStore {
   constructor(private root: string) {}
+  private storageError() { return new HttpError(503, PERSISTENT_STORAGE_ERROR); }
   private path(id: string, filename: string) {
     if (!isRegistrationId(id)) throw new HttpError(404, "Registration not found.");
     return join(this.root, id, filename);
   }
+  private async rootExists() {
+    try { return (await stat(this.root)).isDirectory(); } catch { return false; }
+  }
+  async ensureReady() {
+    const probe = join(this.root, `.storage-check-${randomUUID()}`);
+    try {
+      await mkdir(this.root, { recursive: true, mode: 0o700 });
+      if (!(await stat(this.root)).isDirectory()) throw new Error("Private storage root is not a directory");
+      await access(this.root, constants.R_OK | constants.W_OK | constants.X_OK);
+      await writeFile(probe, "", { flag: "wx", mode: 0o600 });
+    } catch { throw this.storageError(); }
+    finally { await unlink(probe).catch(() => undefined); }
+  }
   async withWriteLock<T>(operation: () => Promise<T>): Promise<T> {
-    await mkdir(this.root, { recursive: true, mode: 0o700 });
+    await this.ensureReady();
     let compromised = false;
     let release: () => Promise<void>;
     try { release = await lockfile.lock(this.root, { realpath: false, stale: 120_000, update: 1000, retries: { retries: 20, minTimeout: 100, maxTimeout: 500, factor: 1.1 }, onCompromised: () => { compromised = true; } }); }
@@ -34,14 +48,27 @@ export class PrivateStore {
   }
   private async write(id: string, filename: string, bytes: Uint8Array | string) {
     const target = this.path(id, filename);
-    await mkdir(join(this.root, id), { recursive: true, mode: 0o700 });
     const temporary = `${target}.${randomUUID()}.tmp`;
-    try { await writeFile(temporary, bytes, { flag: "wx", mode: 0o600 }); await rename(temporary, target); }
+    try { await mkdir(join(this.root, id), { recursive: true, mode: 0o700 }); await writeFile(temporary, bytes, { flag: "wx", mode: 0o600 }); await rename(temporary, target); }
+    catch { throw this.storageError(); }
     finally { await unlink(temporary).catch(() => undefined); }
   }
   async readRecord(id: string): Promise<PrivateRecord | null> {
     try { return JSON.parse(await readFile(this.path(id, "record.json"), "utf8")) as PrivateRecord; }
-    catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return null; throw error; }
+    catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+        if (!(await this.rootExists())) throw this.storageError();
+        return null;
+      }
+      throw this.storageError();
+    }
+  }
+  async readAcademicYear(id: string, expectedParticipant?: { name: string; email: string }): Promise<string | null> {
+    const record = await this.readRecord(id);
+    if (!record || record.id !== id) return null;
+    const parsed = registrationSchema.safeParse(record.input);
+    if (parsed.success && expectedParticipant && (parsed.data.participant.name !== expectedParticipant.name || parsed.data.participant.email !== expectedParticipant.email)) return null;
+    return parsed.success ? parsed.data.participant.year : null;
   }
   saveRecord(record: PrivateRecord) { return this.write(record.id, "record.json", JSON.stringify(record)); }
   saveProof(id: string, bytes: Uint8Array) { return this.write(id, "proof.png", bytes); }
