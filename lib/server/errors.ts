@@ -39,6 +39,9 @@ export class GoogleSheetsError extends HttpError {
     this.name = "GoogleSheetsError";
   }
 }
+export const PERSISTENT_STORAGE_ERROR = "Persistent private registration storage is unavailable. Registration could not be completed. Please contact the organizer.";
+export const MISSING_DOSSIER_ERROR = "Registration is listed in Google Sheets, but its private registration dossier is unavailable. No private data was reconstructed; follow the organizer recovery procedure.";
+export const LOCAL_GOOGLE_DISABLED_ERROR = "Local Google Sheets access is disabled. Configure a dedicated LOCAL_GOOGLE_SHEET_ID and set ALLOW_LOCAL_GOOGLE_WRITES=true, or use the isolated test fixtures.";
 export const privateHeaders = { "Cache-Control": "private, no-store, max-age=0", "X-Content-Type-Options": "nosniff", "Vary": "Cookie" };
 
 export class BaseController {

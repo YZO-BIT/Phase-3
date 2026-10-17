@@ -192,6 +192,7 @@ export class RegistrationService {
   }
   async decide(id: string, decision: "APPROVE" | "REJECT", remarks: string, admin: Principal) {
     if (admin.role !== "admin") throw new HttpError(403, "Administrator authorization required.");
+    assertPersistentStorageConfigured(this.config);
     return this.store.withWriteLock(async () => {
       const record = await this.authorizedRecord(id, admin);
       const row = await this.currentRow(record);

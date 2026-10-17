@@ -84,7 +84,7 @@ test("readConfig strips accidental quotes from Google identifiers and records sa
   const names = ["APP_URL", "PRIVATE_STORAGE_DIR", "GOOGLE_SHEET_ID", "GOOGLE_SHEET_NAME", "GOOGLE_SERVICE_ACCOUNT_EMAIL", "GOOGLE_PRIVATE_KEY"];
   const previous = Object.fromEntries(names.map((name) => [name, process.env[name]]));
   try {
-    process.env.APP_URL = "http://localhost:3000";
+    process.env.APP_URL = "https://example.test";
     process.env.PRIVATE_STORAGE_DIR = ".private";
     process.env.GOOGLE_SHEET_ID = '"test-spreadsheet"';
     process.env.GOOGLE_SHEET_NAME = "'Registrations'";

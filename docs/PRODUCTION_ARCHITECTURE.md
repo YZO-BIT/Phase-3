@@ -504,6 +504,8 @@ The root is resolved from `PRIVATE_STORAGE_DIR` and rejected if it is `public/` 
 - `sharp` must successfully decode the content; declared MIME and actual format must agree.
 - Empty, animated/multi-page, missing-dimension, oversized decoded, and invalid images are rejected.
 - The normalized output is PNG with a SHA-256 hash and recorded byte size.
+- `PRIVATE_STORAGE_DIR` is mandatory for production configuration. If the configured storage root is unavailable or not writable, registration fails with `503` before `ensureHeaders` or any Sheet append; an existing Sheet row with no local dossier remains a recovery case and is never reconstructed from public data.
+- Localhost uses only `LOCAL_PRIVATE_STORAGE_DIR` and ignores production `GOOGLE_*`/`PRIVATE_STORAGE_DIR` values. A dedicated development Sheet is opt-in through `ALLOW_LOCAL_GOOGLE_WRITES=true` and the `LOCAL_GOOGLE_*` variables; without it, local Google access fails closed and tests must use the injected mock transport.
 
 ### Live-host requirement
 
@@ -595,8 +597,8 @@ State-changing endpoints require the request `Origin` to equal the configured `A
 | Cookies | Secure flag omitted on HTTP localhost | Secure flag enabled automatically on HTTPS |
 | CSP | `unsafe-eval` and `ws:` allowed for Next dev tooling | No `unsafe-eval`; no dev WebSocket allowance |
 | HSTS | Not added | `Strict-Transport-Security` added |
-| Storage | `./.private` can be local disposable test storage | Must map to persistent private volume |
-| Google | Isolated test transport in tests; no real credentials required | Real service account and restricted Sheet required |
+| Storage | Absolute `LOCAL_PRIVATE_STORAGE_DIR` only | Must map to persistent private volume |
+| Google | Disabled by default; dedicated `LOCAL_GOOGLE_*` target only when explicitly approved | Real service account and restricted Sheet required |
 | UPI | Test/local values may be used only for browser checks | Real organizer recipient required; verify with a small real test payment |
 | Logging | Console output is acceptable for local debugging | Collect structured 5xx logs without secrets; alert on repeated failures |
 | Build | `next dev` | `npm run build` then `npm run start` |

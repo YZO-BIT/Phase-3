@@ -15,15 +15,18 @@ async function runCheck(t: TestContext, overrides: Record<string, string> = {}) 
   t.after(() => rm(root, { recursive: true, force: true }));
   // Intentionally malformed test key fails locally during signing, without a network call.
   const localValues = [
-    "GOOGLE_SHEET_ID=local-test-sheet-id",
-    "GOOGLE_SERVICE_ACCOUNT_EMAIL=local-test-service@example.test",
-    'GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\\ninvalid-test-key\\n-----END PRIVATE KEY-----\\n"',
-    "GOOGLE_SHEET_NAME=Local Test Tab",
+    "APP_URL=http://localhost:3000",
+    `LOCAL_PRIVATE_STORAGE_DIR=${join(root, ".private")}`,
+    "ALLOW_LOCAL_GOOGLE_WRITES=true",
+    "LOCAL_GOOGLE_SHEET_ID=local-test-sheet-id",
+    "LOCAL_GOOGLE_SERVICE_ACCOUNT_EMAIL=local-test-service@example.test",
+    'LOCAL_GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\\ninvalid-test-key\\n-----END PRIVATE KEY-----\\n"',
+    "LOCAL_GOOGLE_SHEET_NAME=Local Test Tab",
   ];
   await writeFile(join(root, ".env.local"), localValues.join("\n"), { mode: 0o600 });
   const env = { ...process.env };
   for (const name of Object.keys(env)) {
-    if (/^(GOOGLE_|ADMIN_|PAYMENT_)/.test(name) || ["APP_URL", "PRIVATE_STORAGE_DIR", "SESSION_SECRET", "NODE_ENV", "__NEXT_PROCESSED_ENV"].includes(name)) delete env[name];
+    if (/^(GOOGLE_|LOCAL_GOOGLE_|ADMIN_|PAYMENT_)/.test(name) || ["APP_URL", "PRIVATE_STORAGE_DIR", "LOCAL_PRIVATE_STORAGE_DIR", "ALLOW_LOCAL_GOOGLE_WRITES", "SESSION_SECRET", "NODE_ENV", "__NEXT_PROCESSED_ENV"].includes(name)) delete env[name];
   }
   const child = spawnSync(process.execPath, ["--conditions=react-server", "--import", tsx, script], {
     cwd: root, env: { ...env, ...overrides }, encoding: "utf8", timeout: 30_000,
@@ -56,8 +59,8 @@ test("Google diagnostic CLI loads local Next.js environment files before reading
   for (const name of ["spreadsheetId", "sheetName", "range", "apiMessage"]) assert.equal(name in google, false);
 });
 
-test("Google diagnostic CLI preserves injected environment precedence over .env.local", async (t) => {
-  const { diagnostic } = await runCheck(t, { GOOGLE_PRIVATE_KEY: "" });
+test("Google diagnostic CLI preserves injected local environment precedence over .env.local", async (t) => {
+  const { diagnostic } = await runCheck(t, { LOCAL_GOOGLE_PRIVATE_KEY: "" });
   const google = diagnostic.googleSheets;
   assert.equal(google.phase, "configuration");
   assert.equal(google.configuration.sheetIdConfigured, true);

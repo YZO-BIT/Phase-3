@@ -2,7 +2,7 @@ import "server-only";
 import { JWT } from "google-auth-library";
 import { z } from "zod";
 import type { ServerConfig } from "./config";
-import { GoogleSheetsError, HttpError, type GoogleSheetsDiagnostic, type GoogleSheetsPhase } from "./errors";
+import { GoogleSheetsError, HttpError, LOCAL_GOOGLE_DISABLED_ERROR, type GoogleSheetsDiagnostic, type GoogleSheetsPhase } from "./errors";
 
 export const SHEET_COLUMNS = [
   "Registration ID", "Registration Date", "Event Name", "Event Date", "Event Time", "Team / Participant Name", "Registration Type", "Team Size",
@@ -133,6 +133,7 @@ export class GoogleSheetsRepository {
   private async request(path: string, method = "GET", body?: unknown, context: RequestContext = { phase: "sheet_read" }) {
     const requestContext = { ...context, method };
     const baseDiagnostic = this.diagnostic(requestContext);
+    if (this.config.localAccessDisabled) throw new HttpError(503, LOCAL_GOOGLE_DISABLED_ERROR, { ...baseDiagnostic, phase: "configuration", apiReason: "local_google_disabled", apiMessage: "Local Google Sheets access is disabled until a dedicated development sheet is explicitly configured." });
     if (!this.config.sheetId || !this.config.email || !this.config.privateKey) {
       throw new HttpError(503, "Google Sheets registration storage is not configured. Contact the organizer.", { ...baseDiagnostic, phase: "configuration", apiReason: "missing_configuration", apiMessage: "One or more Google Sheets variables are missing." });
     }
